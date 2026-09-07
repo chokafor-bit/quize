@@ -250,6 +250,17 @@
   .name-form label { display: block; font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; text-align: left; }
   .name-form input { width: 100%; padding: 12px 16px; background: #0d0d0d; border: 1.5px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; box-sizing: border-box; transition: border-color 0.2s; }
   .name-form input:focus { border-color: var(--accent); }
+  .cloud-status {
+    margin-top: 8px;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .4px;
+    text-align: left;
+    min-height: 16px;
+  }
+  .cloud-status.ok { color: var(--correct); }
+  .cloud-status.warn { color: #f5c842; }
+  .cloud-status.error { color: #ff8f8f; }
   .enter-btn { width: 100%; padding: 17px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; color: #fff; cursor: pointer; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 4px; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 8px 30px rgba(0,172,215,0.2); }
   .enter-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,172,215,0.3); }
   .welcome-msg { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; min-height: 28px; }
@@ -381,6 +392,7 @@
         <input type="text" id="visitorName" placeholder="Enter your name..." maxlength="20"
           onfocus="this.style.borderColor='#00acd7'" onblur="this.style.borderColor='#2a2a2a'"
           onkeydown="if(event.key==='Enter') enterApp()" />
+        <div id="cloudStatus" class="cloud-status">☁ Connecting cloud save...</div>
       </div>
       <button class="enter-btn" onclick="enterApp()">Let's Go 🐹</button>
       <p style="margin-top:14px;color:#444;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Built by Chekus Joseph</p>
@@ -2645,6 +2657,34 @@ const DIFF_TIME = { easy: 30, medium: 20, hard: 10 };
 const letters = ['A','B','C','D'];
 
 const GAME_KEY = 'imperativeGoGame';
+const NAME_KEY = 'imperativeGoName';
+
+/*
+ * SUPABASE CLOUD SAVE
+ * -------------------------------------------------------------
+ * 1. Create a Supabase project.
+ * 2. Enable Authentication -> Sign In / Providers -> Anonymous.
+ * 3. Run the SQL supplied below this file.
+ * 4. Replace SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY.
+ *
+ * Only the publishable/anon key belongs in browser code.
+ * NEVER put a Supabase service_role/secret key in this file.
+ */
+const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
+const SUPABASE_PUBLISHABLE_KEY = 'YOUR_SUPABASE_PUBLISHABLE_KEY';
+const supabaseClient =
+  window.supabase && SUPABASE_URL.startsWith('http')
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true }
+      })
+    : null;
+
+let cloudReady = false;
+let cloudUserId = null;
+let cloudSaveTimer = null;
+let cloudSaveInFlight = false;
+let cloudSaveQueued = false;
+
 const ACHIEVEMENTS = [
   {id:'first', icon:'🌱', name:'First Steps', desc:'Complete your first quiz.', check:s=>s.games>=1, reward:25},
   {id:'perfect', icon:'💯', name:'Perfect Run', desc:'Get 25/25 in a quiz.', check:s=>s.perfect>=1, reward:100},
@@ -2659,18 +2699,163 @@ const SHOP_ITEMS = [
   {id:'double', icon:'✨', name:'Double Coins', desc:'Double the coins earned from your next quiz.', cost:120}
 ];
 
-function loadGame() {
-  const defaults = {coins:0, games:0, correct:0, perfect:0, streak:0, dailyCompleted:0, lastDaily:'', unlocked:[], xp:0, inventory:{hint:0,skip:0,double:0}};
-  try { const saved=JSON.parse(localStorage.getItem(GAME_KEY) || '{}'); return {...defaults, ...saved, xp:Number(saved.xp||0), inventory:{...defaults.inventory,...(saved.inventory||{})}}; }
-  catch(e) { return defaults; }
+function defaultGame() {
+  return {
+    coins:0, games:0, correct:0, perfect:0, streak:0,
+    dailyCompleted:0, lastDaily:'', unlocked:[], xp:0,
+    inventory:{hint:0,skip:0,double:0}
+  };
 }
+
+function normalizeGame(saved) {
+  const defaults = defaultGame();
+  const source = saved && typeof saved === 'object' ? saved : {};
+  return {
+    ...defaults,
+    ...source,
+    coins: Number(source.coins || 0),
+    games: Number(source.games || 0),
+    correct: Number(source.correct || 0),
+    perfect: Number(source.perfect || 0),
+    streak: Number(source.streak || 0),
+    dailyCompleted: Number(source.dailyCompleted || 0),
+    xp: Number(source.xp || 0),
+    unlocked: Array.isArray(source.unlocked) ? source.unlocked : [],
+    inventory: {...defaults.inventory, ...(source.inventory || {})}
+  };
+}
+
+function loadGame() {
+  try {
+    return normalizeGame(JSON.parse(localStorage.getItem(GAME_KEY) || '{}'));
+  } catch(e) {
+    return defaultGame();
+  }
+}
+
 let game = loadGame();
 
-function saveGame() {
+function setCloudStatus(message, type='') {
+  const el = document.getElementById('cloudStatus');
+  if (!el) return;
+  el.textContent = message;
+  el.className = 'cloud-status' + (type ? ' ' + type : '');
+}
+
+function saveGame(options={}) {
+  // Keep a local copy as a fast offline fallback.
   localStorage.setItem(GAME_KEY, JSON.stringify(game));
   updateGameHud();
+
+  if (!options.skipCloud && cloudReady) {
+    queueCloudSave();
+  }
 }
-function getLevel() { return Math.floor((game.xp || 0) / 250) + 1; }
+
+function queueCloudSave() {
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(() => {
+    saveGameToCloud();
+  }, 250);
+}
+
+async function saveGameToCloud() {
+  if (!cloudReady || !cloudUserId || !supabaseClient) return;
+
+  if (cloudSaveInFlight) {
+    cloudSaveQueued = true;
+    return;
+  }
+
+  cloudSaveInFlight = true;
+  try {
+    const name = (visitorName || localStorage.getItem(NAME_KEY) || '').trim().slice(0, 20);
+
+    const { error } = await supabaseClient
+      .from('game_profiles')
+      .upsert({
+        user_id: cloudUserId,
+        player_name: name || null,
+        game_state: game,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+
+    if (error) throw error;
+
+    setCloudStatus('☁ Cloud save active · progress saved', 'ok');
+  } catch (error) {
+    console.error('Cloud save failed:', error);
+    setCloudStatus('⚠ Cloud save failed · local save still active', 'warn');
+  } finally {
+    cloudSaveInFlight = false;
+    if (cloudSaveQueued) {
+      cloudSaveQueued = false;
+      queueCloudSave();
+    }
+  }
+}
+
+async function initCloudSave() {
+  if (!supabaseClient ||
+      SUPABASE_URL.includes('YOUR_SUPABASE') ||
+      SUPABASE_PUBLISHABLE_KEY.includes('YOUR_SUPABASE')) {
+    setCloudStatus('⚠ Supabase not configured · local save active', 'warn');
+    return;
+  }
+
+  try {
+    setCloudStatus('☁ Connecting to cloud...', '');
+
+    let { data: sessionData, error: sessionError } =
+      await supabaseClient.auth.getSession();
+
+    if (sessionError) throw sessionError;
+
+    if (!sessionData.session) {
+      const { data, error } = await supabaseClient.auth.signInAnonymously();
+      if (error) throw error;
+      sessionData = { session: data.session };
+    }
+
+    cloudUserId = sessionData.session.user.id;
+    cloudReady = true;
+
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('game_profiles')
+      .select('game_state, player_name')
+      .eq('user_id', cloudUserId)
+      .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    if (profile && profile.game_state) {
+      // Cloud is the source of truth once a cloud profile exists.
+      game = normalizeGame(profile.game_state);
+
+      if (profile.player_name) {
+        visitorName = profile.player_name;
+        localStorage.setItem(NAME_KEY, visitorName);
+        const nameInput = document.getElementById('visitorName');
+        if (nameInput) nameInput.value = visitorName;
+      }
+
+      syncDailyStreak();
+      saveGame({skipCloud:true});
+      updateGameHud();
+      setCloudStatus('☁ Cloud save active · progress loaded', 'ok');
+    } else {
+      // First cloud visit: migrate the existing local progress to Supabase.
+      await saveGameToCloud();
+    }
+  } catch (error) {
+    console.error('Supabase initialization failed:', error);
+    cloudReady = false;
+    setCloudStatus('⚠ Cloud unavailable · local save active', 'warn');
+  }
+}
+
+function getLevel() {
+ return Math.floor((game.xp || 0) / 250) + 1; }
 function xpIntoLevel() { return (game.xp || 0) % 250; }
 function updateGameHud() {
   document.getElementById('coinCount').textContent = game.coins;
@@ -2759,8 +2944,9 @@ function show(id) {
 
 function enterApp() {
   const input = document.getElementById('visitorName');
-  visitorName = input.value.trim();
-  localStorage.setItem('imperativeGoName', visitorName);
+  visitorName = input.value.trim().slice(0, 20);
+  localStorage.setItem(NAME_KEY, visitorName);
+  if (cloudReady) saveGameToCloud();
   const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
   const welcomeLine = visitorName
     ? `Hey ${visitorName}! ${greeting}`
@@ -2770,7 +2956,7 @@ function enterApp() {
 }
 
 // On page load, show the welcome screen and set a random welcome message
-window.onload = function() {
+window.onload = async function() {
   const msgs = [
     "Welcome, future Gopher! 🐹",
     "Hello, Go developer! 👋",
@@ -2780,9 +2966,30 @@ window.onload = function() {
   ];
   document.getElementById('welcomeMsg').textContent =
     msgs[Math.floor(Math.random() * msgs.length)];
+
+  const savedName = localStorage.getItem(NAME_KEY) || '';
+  if (savedName) {
+    document.getElementById('visitorName').value = savedName;
+    visitorName = savedName;
+  }
+
   show('welcomeScreen');
   updateGameHud();
+
+  // Load cloud progress after the page is ready.
+  await initCloudSave();
+  updateGameHud();
 };
+
+window.addEventListener('beforeunload', () => {
+  localStorage.setItem(GAME_KEY, JSON.stringify(game));
+  if (cloudReady) {
+    // The queued request may not finish during tab close; normal saves happen immediately
+    // after gameplay actions and are also debounced for a short period.
+    clearTimeout(cloudSaveTimer);
+    saveGameToCloud();
+  }
+});
 
 function setDiff(d, btn) {
   difficulty = d;
@@ -3049,6 +3256,11 @@ function showScore() {
 // ── LEADERBOARD (backed by Go server API) ─────────────────────
 async function saveScore() {
   const name = document.getElementById('playerName').value.trim() || visitorName || 'Anonymous';
+  if (name !== visitorName) {
+    visitorName = name.slice(0, 20);
+    localStorage.setItem(NAME_KEY, visitorName);
+  }
+  saveGame();
   const saveBtns = document.querySelectorAll('[onclick="saveScore()"]');
   saveBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
 
