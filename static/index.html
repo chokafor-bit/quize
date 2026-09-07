@@ -253,6 +253,48 @@
   .enter-btn { width: 100%; padding: 17px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; color: #fff; cursor: pointer; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 4px; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 8px 30px rgba(0,172,215,0.2); }
   .enter-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,172,215,0.3); }
   .welcome-msg { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; min-height: 28px; }
+
+  /* GAME HUD / META */
+  .game-hud { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .game-hud > span { background:rgba(255,255,255,.03); border:1px solid var(--border); border-radius:9px; padding:6px 10px; font-size:12px; }
+  .hud-btn { background:transparent; border:1px solid var(--border); color:var(--muted); border-radius:9px; padding:6px 10px; cursor:pointer; font-size:11px; font-family:'DM Sans',sans-serif; }
+  .hud-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .secondary-btn { width:100%; padding:12px; background:transparent; border:1.5px solid var(--border); border-radius:12px; color:var(--muted); cursor:pointer; font-family:'Bebas Neue',cursive; font-size:17px; letter-spacing:3px; margin-top:10px; }
+  .secondary-btn:hover { border-color:var(--accent); color:var(--accent); }
+  .quit-btn { margin-top:12px; width:100%; padding:11px; background:transparent; border:1px solid rgba(255,79,79,.3); border-radius:10px; color:#ff8f8f; cursor:pointer; font-family:'Bebas Neue',cursive; font-size:15px; letter-spacing:3px; }
+  .quit-btn:hover { background:rgba(255,79,79,.08); border-color:var(--wrong); }
+  .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:18px 0; }
+  .meta-card { background:rgba(255,255,255,.02); border:1px solid var(--border); border-radius:12px; padding:14px; text-align:center; cursor:pointer; }
+  .meta-card:hover { border-color:var(--accent); }
+  .meta-card .big { font-family:'Bebas Neue',cursive; font-size:22px; color:var(--accent); }
+  .meta-card .small { font-size:11px; color:var(--muted); margin-top:2px; }
+  .achievement-list, .shop-list { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
+  .achievement-item, .shop-item { display:flex; align-items:center; gap:12px; border:1px solid var(--border); background:rgba(255,255,255,.02); border-radius:12px; padding:12px; }
+  .achievement-item.locked { opacity:.45; }
+  .achievement-icon { font-size:25px; width:34px; text-align:center; }
+  .achievement-info { flex:1; }
+  .achievement-name, .shop-name { font-weight:700; font-size:14px; }
+  .achievement-desc, .shop-desc { color:var(--muted); font-size:11px; margin-top:3px; line-height:1.4; }
+  .shop-buy { background:var(--accent); border:0; border-radius:8px; padding:8px 10px; color:#000; font-weight:700; cursor:pointer; }
+  .shop-buy:disabled { opacity:.35; cursor:not-allowed; }
+  .daily-badge { display:inline-block; padding:5px 10px; border-radius:99px; background:rgba(245,200,66,.1); border:1px solid rgba(245,200,66,.25); color:#f5c842; font-size:11px; letter-spacing:1px; margin-bottom:12px; }
+
+
+  /* FUN MODE */
+  .fun-stats { display:flex; gap:7px; flex-wrap:wrap; margin-top:8px; }
+  .fun-pill { background:rgba(255,255,255,.035); border:1px solid var(--border); border-radius:999px; padding:5px 9px; font-size:11px; }
+  .combo-pill.hot { border-color:#f5c842; color:#f5c842; animation:pulseHot .7s infinite alternate; }
+  @keyframes pulseHot { from{transform:scale(1)} to{transform:scale(1.05)} }
+  .xp-wrap { margin-top:8px; height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
+  .xp-bar { height:100%; width:0%; background:linear-gradient(90deg,#f5c842,var(--accent)); transition:width .35s ease; }
+  .power-toast { position:fixed; left:50%; top:18%; transform:translate(-50%,-20px) scale(.9); opacity:0; pointer-events:none; z-index:9999; background:#161616; border:1px solid var(--accent); border-radius:14px; padding:12px 18px; font-weight:700; box-shadow:0 12px 40px rgba(0,0,0,.45); transition:.25s ease; }
+  .power-toast.show { opacity:1; transform:translate(-50%,0) scale(1); }
+  .streak-banner { text-align:center; font-family:'Bebas Neue',cursive; letter-spacing:2px; color:#f5c842; min-height:22px; margin:4px 0; }
+  .daily-card { background:linear-gradient(135deg,rgba(0,172,215,.09),rgba(206,50,98,.09)); border:1px solid rgba(245,200,66,.25); border-radius:14px; padding:14px; margin:14px 0; }
+  .daily-card strong { color:#f5c842; }
+  .confetti { position:fixed; width:8px; height:14px; z-index:9998; pointer-events:none; animation:fall 900ms ease-out forwards; }
+  @keyframes fall { 0%{transform:translateY(-20px) rotate(0);opacity:1} 100%{transform:translateY(95vh) rotate(720deg);opacity:0} }
+
 </style>
 </head>
 <body>
@@ -264,6 +306,19 @@
       <span id="scoreLabel">Score: 0</span>
     </div>
     <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+    <div id="gameHud" class="game-hud" style="display:none;">
+      <span>🪙 <b id="coinCount">0</b></span>
+      <span>🔥 <b id="streakCount">0</b></span>
+      <button class="hud-btn" onclick="showAchievements()">🏆 Achievements</button>
+      <button class="hud-btn" onclick="showShop()">🛒 Shop</button>
+      <div class="fun-stats" style="width:100%;">
+        <span class="fun-pill">⭐ Level <b id="levelCount">1</b></span>
+        <span class="fun-pill combo-pill" id="comboPill">🔥 Combo x<b id="comboCount">0</b></span>
+        <span class="fun-pill">⚡ XP <b id="xpCount">0</b></span>
+      </div>
+      <div class="xp-wrap" style="width:100%;"><div class="xp-bar" id="xpBar"></div></div>
+      <div class="streak-banner" id="streakBanner" style="width:100%;"></div>
+    </div>
     <br>
   </div>
 
@@ -273,19 +328,19 @@
     <div id="welcomeScreen" class="welcome-screen">
       <span class="welcome-gopher">🐹</span>
       <div class="welcome-msg" id="welcomeMsg"></div>
-      <div class="welcome-title">Welcome to <span>Imperative in Go</span></div>
-      <p class="welcome-subtitle">The ultimate quiz in 01edu curriculum, for students. Test yourself on real project concepts in Go fundamentals, and senior-level patterns.</p>
+      <div class="welcome-title">Welcome to <span>quiz in Go</span></div>
+      <p class="welcome-subtitle">The quiz in golang, for students. Test yourself on real project concepts in Go fundamentals, and 01 edu imperative.</p>
 
       <div class="welcome-features">
         <div class="feature-card">
           <span class="feature-icon">🎯</span>
           <div class="feature-title">252 Questions</div>
-          <div class="feature-desc">Handcrafted questions covering every 01edu Go project</div>
+          <div class="feature-desc">Handcrafted questions in Go project, and in 01 edu curriculum </div>
         </div>
         <div class="feature-card">
           <span class="feature-icon">⏱</span>
           <div class="feature-title">3 Difficulty Levels</div>
-          <div class="feature-desc">Easy (30s), Medium (20s), Hard (10s) per question</div>
+          <div class="feature-desc">Easy (30s), Medium (25s), Hard (15) per question</div>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🏆</span>
@@ -295,7 +350,7 @@
         <div class="feature-card">
           <span class="feature-icon">🔀</span>
           <div class="feature-title">Always Fresh</div>
-          <div class="feature-desc">25 random questions each round — never the same quiz twice</div>
+          <div class="feature-desc">25 random questions each round</div>
         </div>
       </div>
 
@@ -305,19 +360,19 @@
           <span class="topic-tag">ascii-art</span>
           <span class="topic-tag">ascii-web</span>
           <span class="topic-tag">go-reloaded</span>
-          <span class="topic-tag">lem-in</span>
-          <span class="topic-tag">forum</span>
+          <span class="topic-tag">Algorithms & Go fundamentals</span>
+          <span class="topic-tag">Type Conversion & strconv</span>
           <span class="topic-tag">groupie-tracker</span>
-          <span class="topic-tag">net-cat</span>
-          <span class="topic-tag">my-ls</span>
-          <span class="topic-tag">blockchain</span>
-          <span class="topic-tag">make-your-game</span>
+          <span class="topic-tag">Maps</span>
+          <span class="topic-tag">Command-Line Arguments</span>
+          <span class="topic-tag">Packages & Modules</span>
+          <span class="topic-tag">Structs & Methods</span>
           <span class="topic-tag">strings</span>
           <span class="topic-tag">goroutines</span>
           <span class="topic-tag">interfaces</span>
           <span class="topic-tag">context</span>
-          <span class="topic-tag">testing</span>
-          <span class="topic-tag">senior go</span>
+          <span class="topic-tag">Testing & Building</span>
+          <span class="topic-tag">Runes, Bytes & Unicode</span>
         </div>
       </div>
 
@@ -341,15 +396,21 @@
         <div class="stat-pill"><div class="num">25</div><div class="lbl">Per Round</div></div>
         <div class="stat-pill"><div class="num">∞</div><div class="lbl">Replays</div></div>
       </div>
+      <div class="meta-grid">
+        <div class="meta-card" onclick="startDailyChallenge()"><div class="big">📅 Daily</div><div class="small">+50 bonus coins</div></div>
+        <div class="meta-card" onclick="showShop()"><div class="big">🛒 Shop</div><div class="small">Spend your coins</div></div>
+        <div class="meta-card" onclick="showAchievements()"><div class="big">🏆 Achievements</div><div class="small">Unlock rewards</div></div>
+        <div class="meta-card"><div class="big">⭐ Level <span id="startLevel">1</span></div><div class="small">Earn XP while playing</div></div>
+      </div>
       <div class="diff-row">
         <button class="diff-btn easy active" onclick="setDiff('easy', this)">
           🟢 Easy<span class="diff-label">30s / Q</span>
         </button>
         <button class="diff-btn medium" onclick="setDiff('medium', this)">
-          🟡 Medium<span class="diff-label">20s / Q</span>
+          🟡 Medium<span class="diff-label">25s / Q</span>
         </button>
         <button class="diff-btn hard" onclick="setDiff('hard', this)">
-          🔴 Hard<span class="diff-label">10s / Q</span>
+          🔴 Hard<span class="diff-label">15s / Q</span>
         </button>
       </div>
       <button class="start-btn" onclick="startQuiz()">Start Quiz</button>
@@ -369,6 +430,7 @@
       <div class="options" id="optionsContainer"></div>
       <div class="feedback" id="feedback"></div>
       <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
+      <button class="quit-btn" onclick="quitQuiz()">✕ Quit Quiz</button>
     </div>
 
     <!-- SCORE -->
@@ -391,6 +453,28 @@
           <button onclick="showLeaderboard()" style="padding:14px 28px;background:transparent;border:1.5px solid #2a2a2a;border-radius:12px;color:#666;cursor:pointer;font-family:'Bebas Neue',cursive;font-size:17px;letter-spacing:3px;">🏆 Scores</button>
         </div>
       </div>
+    </div>
+
+    <!-- ACHIEVEMENTS -->
+    <div id="achievementScreen" style="display:none;">
+      <div class="lb-title">🏆 Achievements</div>
+      <div class="achievement-list" id="achievementList"></div>
+      <button class="lb-back" onclick="show('startScreen')">← Back</button>
+    </div>
+
+    <!-- SHOP -->
+    <div id="shopScreen" style="display:none;">
+      <div class="lb-title">🛒 Coin Shop</div>
+      <p style="text-align:center;color:var(--muted);font-size:13px;margin-bottom:14px;">Balance: 🪙 <b id="shopCoins">0</b></p>
+      <div class="shop-list" id="shopList"></div>
+      <button class="lb-back" onclick="show('startScreen')">← Back</button>
+    </div>
+
+    <!-- DAILY CHALLENGE -->
+    <div id="dailyScreen" style="display:none;">
+      <div class="lb-title">📅 Daily Challenge</div>
+      <div id="dailyContent" class="daily-card"></div>
+      <button class="lb-back" onclick="show('startScreen')">← Back</button>
     </div>
 
     <!-- LEADERBOARD -->
@@ -2553,8 +2637,95 @@ let questions = [], current = 0, score = 0, answered = false;
 let difficulty = 'easy';
 let timerSeconds = 30, timerInterval = null;
 let visitorName = '';
+let isDailyChallenge = false;
+let combo = 0;
+let questionStartedAt = 0;
+let lastReward = 0;
 const DIFF_TIME = { easy: 30, medium: 20, hard: 10 };
 const letters = ['A','B','C','D'];
+
+const GAME_KEY = 'imperativeGoGame';
+const ACHIEVEMENTS = [
+  {id:'first', icon:'🌱', name:'First Steps', desc:'Complete your first quiz.', check:s=>s.games>=1, reward:25},
+  {id:'perfect', icon:'💯', name:'Perfect Run', desc:'Get 25/25 in a quiz.', check:s=>s.perfect>=1, reward:100},
+  {id:'scholar', icon:'📚', name:'Go Scholar', desc:'Answer 100 questions correctly.', check:s=>s.correct>=100, reward:75},
+  {id:'streak3', icon:'🔥', name:'On Fire', desc:'Reach a 3-day daily challenge streak.', check:s=>s.streak>=3, reward:100},
+  {id:'daily7', icon:'📅', name:'Daily Grinder', desc:'Complete 7 daily challenges.', check:s=>s.dailyCompleted>=7, reward:150},
+  {id:'rich', icon:'🪙', name:'Coin Collector', desc:'Hold 500 coins at once.', check:s=>s.coins>=500, reward:100}
+];
+const SHOP_ITEMS = [
+  {id:'hint', icon:'💡', name:'Hint', desc:'Remove two wrong answers in the next question.', cost:40},
+  {id:'skip', icon:'⏭️', name:'Skip Question', desc:'Skip the current question without losing the quiz.', cost:60},
+  {id:'double', icon:'✨', name:'Double Coins', desc:'Double the coins earned from your next quiz.', cost:120}
+];
+
+function loadGame() {
+  const defaults = {coins:0, games:0, correct:0, perfect:0, streak:0, dailyCompleted:0, lastDaily:'', unlocked:[], xp:0, inventory:{hint:0,skip:0,double:0}};
+  try { const saved=JSON.parse(localStorage.getItem(GAME_KEY) || '{}'); return {...defaults, ...saved, xp:Number(saved.xp||0), inventory:{...defaults.inventory,...(saved.inventory||{})}}; }
+  catch(e) { return defaults; }
+}
+let game = loadGame();
+
+function saveGame() {
+  localStorage.setItem(GAME_KEY, JSON.stringify(game));
+  updateGameHud();
+}
+function getLevel() { return Math.floor((game.xp || 0) / 250) + 1; }
+function xpIntoLevel() { return (game.xp || 0) % 250; }
+function updateGameHud() {
+  document.getElementById('coinCount').textContent = game.coins;
+  document.getElementById('streakCount').textContent = game.streak;
+  const shopCoins = document.getElementById('shopCoins');
+  if (shopCoins) shopCoins.textContent = game.coins;
+  const startLv=document.getElementById('startLevel'); if(startLv) startLv.textContent=getLevel();
+  const lv=document.getElementById('levelCount'), xp=document.getElementById('xpCount'), bar=document.getElementById('xpBar'), cc=document.getElementById('comboCount'), cp=document.getElementById('comboPill'), sb=document.getElementById('streakBanner');
+  if(lv) lv.textContent=getLevel();
+  if(xp) xp.textContent=xpIntoLevel()+'/250';
+  if(bar) bar.style.width=(xpIntoLevel()/250*100)+'%';
+  if(cc) cc.textContent=combo;
+  if(cp) cp.classList.toggle('hot',combo>=3);
+  if(sb) sb.textContent=combo>=5?'🔥 UNSTOPPABLE!':combo>=3?'🔥 HOT STREAK!':combo>0?'Nice! Keep the combo alive.':'';
+}
+function addXP(amount) {
+  const before=getLevel(); game.xp=(game.xp||0)+amount; const after=getLevel();
+  if(after>before){ showToast('⭐ LEVEL UP! You are now Level '+after+'!'); burstConfetti(35); }
+  updateGameHud();
+}
+function showToast(msg) {
+  let t=document.getElementById('powerToast'); if(!t){ t=document.createElement('div'); t.id='powerToast'; t.className='power-toast'; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('show'); clearTimeout(t._timer); t._timer=setTimeout(()=>t.classList.remove('show'),1500);
+}
+function burstConfetti(n=24){
+  for(let i=0;i<n;i++){ const c=document.createElement('i'); c.className='confetti'; c.style.left=(10+Math.random()*80)+'vw'; c.style.top='5vh'; c.style.transform='rotate('+Math.random()*360+'deg)'; c.style.background=['#00acd7','#ce3262','#f5c842','#3ddc84','#fff'][Math.floor(Math.random()*5)]; document.body.appendChild(c); setTimeout(()=>c.remove(),1000); }
+}
+function awardAchievements() {
+  ACHIEVEMENTS.forEach(a => {
+    if (!game.unlocked.includes(a.id) && a.check(game)) {
+      game.unlocked.push(a.id);
+      game.coins += a.reward;
+      setTimeout(() => alert(`🏆 Achievement unlocked: ${a.name}! +${a.reward} coins`), 50);
+    }
+  });
+  saveGame();
+}
+function syncDailyStreak() {
+  if (!game.lastDaily) return;
+  const last = new Date(game.lastDaily + 'T00:00:00');
+  const now = new Date(todayKey() + 'T00:00:00');
+  const days = Math.round((now-last)/86400000);
+  if (days > 1) game.streak = 0;
+}
+syncDailyStreak();
+saveGame();
+
+function todayKey() {
+  return new Date().toISOString().slice(0,10);
+}
+function seededIndex(seed, max) {
+  let n = 0;
+  for (let i=0;i<seed.length;i++) n = (n * 31 + seed.charCodeAt(i)) >>> 0;
+  return n % max;
+}
 
 const GREETINGS = [
   "Ready to level up? 🚀",
@@ -2576,17 +2747,20 @@ function shuffle(arr) {
 }
 
 function show(id) {
-  ['welcomeScreen','startScreen','quizScreen','scoreScreen','lbScreen'].forEach(s => {
+  ['welcomeScreen','startScreen','quizScreen','scoreScreen','lbScreen','achievementScreen','shopScreen','dailyScreen'].forEach(s => {
     const el = document.getElementById(s);
     if (el) el.style.display = s === id ? 'block' : 'none';
   });
   document.getElementById('progressArea').style.display =
     (id === 'quizScreen' || id === 'scoreScreen') ? 'block' : 'none';
+  document.getElementById('gameHud').style.display =
+    (id === 'quizScreen' || id === 'scoreScreen') ? 'flex' : 'none';
 }
 
 function enterApp() {
   const input = document.getElementById('visitorName');
   visitorName = input.value.trim();
+  localStorage.setItem('imperativeGoName', visitorName);
   const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
   const welcomeLine = visitorName
     ? `Hey ${visitorName}! ${greeting}`
@@ -2607,6 +2781,7 @@ window.onload = function() {
   document.getElementById('welcomeMsg').textContent =
     msgs[Math.floor(Math.random() * msgs.length)];
   show('welcomeScreen');
+  updateGameHud();
 };
 
 function setDiff(d, btn) {
@@ -2615,7 +2790,84 @@ function setDiff(d, btn) {
   btn.classList.add('active');
 }
 
+function useHint() {
+  if (game.inventory.hint < 1 || answered) return;
+  const q = questions[current];
+  const buttons = [...document.querySelectorAll('.option-btn')];
+  buttons.forEach((b,i) => { if (i !== q.answer) b.dataset.wrong = '1'; });
+  const wrong = buttons.filter(b => b.dataset.wrong === '1').sort(() => Math.random() - .5).slice(0,2);
+  wrong.forEach(b => { b.disabled = true; b.style.opacity = '.25'; });
+  game.inventory.hint--;
+  saveGame();
+}
+function useSkip() {
+  if (game.inventory.skip < 1 || answered) return;
+  game.inventory.skip--;
+  saveGame();
+  nextQuestion();
+}
+function buyItem(id) {
+  const item = SHOP_ITEMS.find(x => x.id === id);
+  if (!item || game.coins < item.cost) return;
+  game.coins -= item.cost;
+  game.inventory[id]++;
+  saveGame();
+  renderShop();
+}
+function showShop() {
+  show('shopScreen');
+  renderShop();
+}
+function renderShop() {
+  document.getElementById('shopCoins').textContent = game.coins;
+  document.getElementById('shopList').innerHTML = SHOP_ITEMS.map(item => `
+    <div class="shop-item">
+      <div class="achievement-icon">${item.icon}</div>
+      <div class="achievement-info">
+        <div class="shop-name">${item.name} <span style="color:var(--accent);font-size:11px;">x${game.inventory[item.id]||0}</span></div>
+        <div class="shop-desc">${item.desc}</div>
+      </div>
+      <button class="shop-buy" onclick="buyItem('${item.id}')" ${game.coins < item.cost ? 'disabled':''}>🪙 ${item.cost}</button>
+    </div>`).join('');
+}
+function showAchievements() {
+  show('achievementScreen');
+  document.getElementById('achievementList').innerHTML = ACHIEVEMENTS.map(a => {
+    const unlocked = game.unlocked.includes(a.id);
+    return `<div class="achievement-item ${unlocked?'':'locked'}">
+      <div class="achievement-icon">${unlocked ? a.icon : '🔒'}</div>
+      <div class="achievement-info">
+        <div class="achievement-name">${a.name}</div>
+        <div class="achievement-desc">${a.desc} ${unlocked ? '✓ Unlocked' : `+${a.reward} coins`}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function quitQuiz() {
+  if (!confirm('Quit this quiz? Your current round will be lost.')) return;
+  stopTimer();
+  show('startScreen');
+}
+function startDailyChallenge() {
+  combo = 0;
+  const key = todayKey();
+  if (game.lastDaily === key) {
+    show('dailyScreen');
+    document.getElementById('dailyContent').innerHTML = `<div class="daily-badge">✓ COMPLETED TODAY</div><p style="text-align:center;color:var(--muted);line-height:1.6;">You already completed today's challenge. Come back tomorrow for a new one!</p><p style="text-align:center;color:#f5c842;margin-top:10px;">🔥 Current streak: <b>${game.streak}</b> days</p>`;
+    return;
+  }
+  const offset = seededIndex(key, Math.max(1, ALL_QUESTIONS.length));
+  questions = Array.from({length:Math.min(25,ALL_QUESTIONS.length)}, (_,i) => ALL_QUESTIONS[(offset+i)%ALL_QUESTIONS.length]);
+  current = 0; score = 0; answered = false; isDailyChallenge = true; difficulty = 'medium';
+  document.getElementById('progressBar').style.width = '0%';
+  showToast('📅 Daily Challenge started! +50 bonus coins waiting!');
+  show('quizScreen');
+  loadQuestion();
+}
+
 function startQuiz() {
+  combo = 0;
+  isDailyChallenge = false;
   questions = shuffle(ALL_QUESTIONS).slice(0, 25);
   current = 0; score = 0; answered = false;
   document.getElementById('progressBar').style.width = '0%';
@@ -2654,6 +2906,8 @@ function updateTimerUI() {
 function timeUp() {
   if (answered) return;
   answered = true;
+  combo = 0;
+  addXP(1);
   document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
   const q = questions[current];
   document.querySelectorAll('.option-btn')[q.answer].classList.add('correct');
@@ -2668,6 +2922,7 @@ function stopTimer() { clearInterval(timerInterval); }
 // ── QUESTION ───────────────────────────────────────────────────
 function loadQuestion() {
   answered = false;
+  questionStartedAt = Date.now();
   const q = questions[current];
   document.getElementById('qLabel').textContent = `Question ${current + 1} of ${questions.length}`;
   document.getElementById('scoreLabel').textContent = `Score: ${score}`;
@@ -2694,6 +2949,13 @@ function loadQuestion() {
     container.appendChild(btn);
   });
 
+  const tools = document.createElement('div');
+  tools.style.cssText = 'display:flex;gap:8px;margin-top:12px;';
+  tools.innerHTML = `
+    <button class="hud-btn" style="flex:1;padding:10px;" onclick="useHint()" ${game.inventory.hint<1?'disabled':''}>💡 Hint (${game.inventory.hint})</button>
+    <button class="hud-btn" style="flex:1;padding:10px;" onclick="useSkip()" ${game.inventory.skip<1?'disabled':''}>⏭ Skip (${game.inventory.skip})</button>`;
+  container.appendChild(tools);
+
   startTimer();
 }
 
@@ -2710,16 +2972,23 @@ function selectAnswer(index, btn) {
   const fb = document.getElementById('feedback');
   if (index === q.answer) {
     btn.classList.add('correct');
-    score++;
+    score++; game.correct++; combo++;
+    const secondsUsed=Math.max(0,(Date.now()-questionStartedAt)/1000);
+    const speedBonus=secondsUsed<=3 ? 15 : secondsUsed<=7 ? 8 : 0;
+    const comboBonus=combo>=3 ? Math.min(20,combo*2) : 0;
+    addXP(10+speedBonus+comboBonus);
     document.getElementById('scoreLabel').textContent = `Score: ${score}`;
-    fb.textContent = '✓ Correct! ' + q.explanation;
+    fb.textContent = speedBonus ? `⚡ FAST! +${speedBonus} XP · ` + q.explanation : (combo>=3 ? `🔥 ${combo} COMBO! · ` + q.explanation : '✓ Correct! ' + q.explanation);
     fb.className = 'feedback correct-fb show';
+    if(combo===3 || combo===5 || combo===10) burstConfetti(combo===10?45:20);
   } else {
     btn.classList.add('wrong');
     document.querySelectorAll('.option-btn')[q.answer].classList.add('correct');
-    fb.textContent = '✗ Not quite. ' + q.explanation;
+    combo = 0; addXP(2);
+    fb.textContent = '✗ Combo broken! +2 XP · ' + q.explanation;
     fb.className = 'feedback wrong-fb show';
   }
+  updateGameHud();
   document.getElementById('nextBtn').classList.add('show');
 }
 
@@ -2753,6 +3022,28 @@ function showScore() {
   else                 { title = 'Keep Coding!';     msg = "Go has a steep curve — review the basics and try again!"; }
   document.getElementById('scoreTitle').textContent = title;
   document.getElementById('scoreMsg').textContent = msg;
+
+  const baseCoins = score * 4 + (score === questions.length ? 50 : 0) + Math.max(0, Math.floor((game.xp||0)/100));
+  let earned = baseCoins;
+  if (isDailyChallenge) {
+    earned += 50;
+    game.lastDaily = todayKey();
+    game.dailyCompleted++;
+    game.streak++;
+  }
+  if (game.inventory.double > 0) {
+    earned *= 2;
+    game.inventory.double--;
+  }
+  game.coins += earned;
+  game.games++;
+  if (score === questions.length) game.perfect++;
+  addXP(score * 5 + (score === questions.length ? 50 : 0));
+  document.getElementById('rewardMsg').textContent =
+    `🪙 +${earned} coins · ⭐ XP gained · ${score === questions.length ? '💯 PERFECT BONUS!' : score >= 20 ? '🔥 Great run!' : 'Keep grinding!'}`;
+  saveGame();
+  awardAchievements();
+  isDailyChallenge = false;
 }
 
 // ── LEADERBOARD (backed by Go server API) ─────────────────────
