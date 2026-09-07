@@ -1,8 +1,9 @@
+// Command quizserver serves the "Imperative in Go" quiz app and backs its
+// leaderboard with a small JSON file on disk (no external DB required).
 package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -19,78 +20,124 @@ type Entry struct {
 	Date  time.Time `json:"date"`
 }
 
-var (
-	mu          sync.Mutex
-	leaderboard []Entry
+const (
+	dataFile   = "leaderboard.json"
+	maxEntries = 200 // keep the file bounded; we only ever show top 10 anyway
 )
 
-func handleGetLeaderboard(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
+var (
+	mu      sync.Mutex
+	entries []Entry
+)
+
+func loadEntries() {
 	mu.Lock()
 	defer mu.Unlock()
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(leaderboard)
+
+	b, err := os.ReadFile(dataFile)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("warning: could not read %s: %v", dataFile, err)
+		}
+		entries = []Entry{}
+		return
+	}
+	if err := json.Unmarshal(b, &entries); err != nil {
+		log.Printf("warning: could not parse %s: %v", dataFile, err)
+		entries = []Entry{}
+	}
 }
 
-func handlePostLeaderboard(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
+func saveEntries() error {
+	// caller must hold mu
+	b, err := json.MarshalIndent(entries, "", "  ")
+	if err != nil {
+		return err
 	}
-	var entry Entry
-	if err := json.NewDecoder(r.Body).Decode(&entry); err != nil {
-		http.Error(w, "Invalid JSON", http.StatusBadRequest)
-		return
+	return os.WriteFile(dataFile, b, 0o644)
+}
+
+func leaderboardHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		mu.Lock()
+		sorted := make([]Entry, len(entries))
+		copy(sorted, entries)
+		mu.Unlock()
+
+		sort.Slice(sorted, func(i, j int) bool {
+			return sorted[i].Score > sorted[j].Score
+		})
+		if len(sorted) > 10 {
+			sorted = sorted[:10]
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(sorted)
+
+	case http.MethodPost:
+		var e Entry
+		if err := json.NewDecoder(r.Body).Decode(&e); err != nil {
+			http.Error(w, "invalid request body", http.StatusBadRequest)
+			return
+		}
+		if e.Name == "" {
+			e.Name = "Anonymous"
+		}
+		if len(e.Name) > 20 {
+			e.Name = e.Name[:20]
+		}
+		if e.Total <= 0 || e.Score < 0 || e.Score > e.Total {
+			http.Error(w, "invalid score", http.StatusBadRequest)
+			return
+		}
+		e.Date = time.Now()
+
+		mu.Lock()
+		entries = append(entries, e)
+		if len(entries) > maxEntries {
+			// keep the best-scoring entries when trimming
+			sort.Slice(entries, func(i, j int) bool { return entries[i].Score > entries[j].Score })
+			entries = entries[:maxEntries]
+		}
+		err := saveEntries()
+		mu.Unlock()
+
+		if err != nil {
+			log.Printf("error saving leaderboard: %v", err)
+			http.Error(w, "could not save score", http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+
+	default:
+		w.Header().Set("Allow", "GET, POST")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 	}
-	if entry.Name == "" {
-		entry.Name = "Anonymous"
-	}
-	if len(entry.Name) > 20 {
-		entry.Name = entry.Name[:20]
-	}
-	entry.Date = time.Now()
-	mu.Lock()
-	leaderboard = append(leaderboard, entry)
-	sort.Slice(leaderboard, func(i, j int) bool {
-		return leaderboard[i].Score > leaderboard[j].Score
+}
+
+// recover middleware: catches panics in any handler and returns a clean 500
+// instead of crashing the server.
+func withRecovery(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				log.Printf("panic recovered: %v", rec)
+				http.Error(w, "internal server error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(w, r)
 	})
-	if len(leaderboard) > 20 {
-		leaderboard = leaderboard[:20]
-	}
-	mu.Unlock()
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"status": "saved"})
 }
 
 func main() {
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	loadEntries()
+
 	mux := http.NewServeMux()
-	fs := http.FileServer(http.Dir("./static"))
-	mux.Handle("/", fs)
-	mux.HandleFunc("/api/leaderboard", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-		switch r.Method {
-		case http.MethodGet:
-			handleGetLeaderboard(w, r)
-		case http.MethodPost:
-			handlePostLeaderboard(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-	fmt.Printf("🐹 Imperative in Go quiz running at http://localhost:%s\n", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
+	mux.HandleFunc("/api/leaderboard", leaderboardHandler)
+	mux.Handle("/", http.FileServer(http.Dir("./static")))
+
+	addr := ":8080"
+	log.Printf("Imperative in Go quiz server listening on http://localhost%s", addr)
+	log.Fatal(http.ListenAndServe(addr, withRecovery(mux)))
 }
