@@ -2814,7 +2814,6 @@ function checkAchievements() {
   });
   if (changed) saveState();
 }
-
 function showAchievements() {
   show('achScreen');
   const list = document.getElementById('achList');
@@ -2822,8 +2821,8 @@ function showAchievements() {
   list.innerHTML = ACHIEVEMENTS.map(a => {
     const unlocked = state.achievements.includes(a.id);
     return `
-      <div class="ach-item ${unlocked ? 'unlocked' : ''}">
-        <div class="ai-icon">${unlocked ? a.icon : '💡'}</div>
+      <div class="ach-item ${unlocked ? 'unlocked' : 'locked'}">
+        <div class="ai-icon">${unlocked ? a.icon : '🔒'}</div>
         <div class="ai-info">
           <div class="ai-name">${escapeHtml(a.name)}</div>
           <div class="ai-desc">${escapeHtml(a.desc)}</div>
@@ -2831,7 +2830,6 @@ function showAchievements() {
       </div>`;
   }).join('');
 }
-
 // ── SHOP ─────────────────────────────────────────────────────
 const SHOP_ITEMS = [
   { id: 'hint50', icon: '✂️', name: '50/50 Hint',  desc: 'Removes two incorrect options from the current question', price: 50 },
