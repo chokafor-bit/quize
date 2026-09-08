@@ -2823,7 +2823,7 @@ function showAchievements() {
     const unlocked = state.achievements.includes(a.id);
     return `
       <div class="ach-item ${unlocked ? 'unlocked' : ''}">
-        <div class="ai-icon">${unlocked ? a.icon : '😜'}</div>
+        <div class="ai-icon">${unlocked ? a.icon : '💡'}</div>
         <div class="ai-info">
           <div class="ai-name">${escapeHtml(a.name)}</div>
           <div class="ai-desc">${escapeHtml(a.desc)}</div>
@@ -2834,9 +2834,9 @@ function showAchievements() {
 
 // ── SHOP ─────────────────────────────────────────────────────
 const SHOP_ITEMS = [
-  { id: 'hint50', icon: '✂️', name: '50/50 Hint',  desc: 'Removes two incorrect options from the current question', price: 80 },
-  { id: 'freeze', icon: '🧊', name: 'Time Freeze', desc: 'Adds 10 extra seconds to the timer',                       price: 90 },
-  { id: 'skip',   icon: '⏭',  name: 'Skip Token',  desc: 'Skip a question with no penalty to your streak',          price: 110 }
+  { id: 'hint50', icon: '✂️', name: '50/50 Hint',  desc: 'Removes two incorrect options from the current question', price: 50 },
+  { id: 'freeze', icon: '🧊', name: 'Time Freeze', desc: 'Adds 10 extra seconds to the timer',                       price: 50},
+  { id: 'skip',   icon: '⏭',  name: 'Skip Token',  desc: 'Skip a question with no penalty to your streak',          price: 50 }
 ];
 
 function showShop() {
