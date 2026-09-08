@@ -2794,11 +2794,11 @@ const ACHIEVEMENTS = [
   { id: 'first_quiz',    icon: '🎓', name: 'First Steps',       desc: 'Complete your first quiz',                         check: s => s.stats.gamesPlayed >= 1 },
   { id: 'perfect',       icon: '💯', name: 'Perfect Round',     desc: 'Score 100% in a round',                            check: s => s.stats.perfectRounds >= 1 },
   { id: 'century',       icon: '📚', name: 'Century Club',      desc: 'Answer 100 questions correctly (lifetime)',        check: s => s.stats.correctTotal >= 100 },
-  { id: 'coin_collector',icon: '💰', name: 'Coin Collector',    desc: 'Earn 1000 coins in total',                          check: s => s.stats.lifetimeCoins >= 100 },
+  { id: 'coin_collector',icon: '💰', name: 'Coin Collector',    desc: 'Earn 1000 coins in total',                          check: s => s.stats.lifetimeCoins >= 1000 },
   { id: 'shopper',       icon: '🛍️', name: 'First Purchase',    desc: 'Buy something from the shop',                      check: s => s.stats.itemsBought >= 1 },
   { id: 'hard_mode',     icon: '🔴', name: 'No Fear',           desc: 'Complete a quiz on Hard difficulty',               check: s => s.stats.hardCompleted >= 1 },
-  { id: 'streak25',       icon: '🔥', name: 'On Fire',           desc: 'Get 25 correct answers in a row',                   check: s => s.stats.bestStreak >= 5 },
-  { id: 'daily10',        icon: '📅', name: 'Habit Former',      desc: 'Reach a 10-day Daily Challenge streak',             check: s => s.stats.dailyStreak >= 3 },
+  { id: 'streak25',       icon: '🔥', name: 'On Fire',           desc: 'Get 25 correct answers in a row',                   check: s => s.stats.bestStreak >= 25 },
+  { id: 'daily10',        icon: '📅', name: 'Habit Former',      desc: 'Reach a 10-day Daily Challenge streak',             check: s => s.stats.dailyStreak >= 10 },
   { id: 'daily7',        icon: '🗓️', name: 'Dedicated Gopher',  desc: 'Reach a 7-day Daily Challenge streak',             check: s => s.stats.dailyStreak >= 7 },
   { id: 'marathon',      icon: '🏃', name: 'Marathoner',        desc: 'Play 10 quizzes',                                  check: s => s.stats.gamesPlayed >= 10 }
 ];
