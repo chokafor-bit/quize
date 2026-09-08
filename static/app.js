@@ -2,7 +2,7 @@ let questions = [], current = 0, score = 0, answered = false;
 let difficulty = 'easy';
 let timerSeconds = 30, timerInterval = null;
 let visitorName = '';
-const DIFF_TIME = { easy: 30, medium: 20, hard: 10 };
+const DIFF_TIME = { easy: 30, medium: 25, hard: 20 };
 const letters = ['A', 'B', 'C', 'D'];
 
 const GREETINGS = [

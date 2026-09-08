@@ -335,36 +335,36 @@
 
     <!-- WELCOME -->
     <div id="welcomeScreen" class="welcome-screen">
-      <span class="welcome-gopher">🐹</span>
+      <span class="welcome-player">🐹</span>
       <div class="welcome-msg" id="welcomeMsg"></div>
-      <div class="welcome-title">Welcome to <span>Imperative in Go</span></div>
+      <div class="welcome-title">Welcome to <span>The ultimate quiz in Go</span></div>
       <p class="welcome-subtitle">The ultimate quiz in 01edu curriculum, for students. Test yourself on real project concepts in Go fundamentals, and senior-level patterns.</p>
 
       <div class="welcome-features">
         <div class="feature-card">
           <span class="feature-icon">🎯</span>
           <div class="feature-title">252 Questions</div>
-          <div class="feature-desc">Handcrafted questions covering every 01edu Go project</div>
+          <div class="feature-desc">Handcrafted questions covering every 01edu Go project and normal go concepts</div>
         </div>
         <div class="feature-card">
           <span class="feature-icon">⏱</span>
           <div class="feature-title">3 Difficulty Levels</div>
-          <div class="feature-desc">Easy (30s), Medium (20s), Hard (10s) per question</div>
+          <div class="feature-desc">Easy (30s), Medium (25s), Hard (20s) per question</div>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🏆</span>
           <div class="feature-title">Leaderboard</div>
-          <div class="feature-desc">Compete with others and save your high scores</div>
+          <div class="feature-desc">Compete with others and save your high scores and win a price from chekus joseph if you perform well in the hard_mode</div>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🔀</span>
           <div class="feature-title">Always Fresh</div>
-          <div class="feature-desc">25 random questions each round — never the same quiz twice</div>
+          <div class="feature-desc">25 random questions each round</div>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🪙</span>
           <div class="feature-title">Coins & Shop</div>
-          <div class="feature-desc">Earn coins for correct answers, spend them on hints and power-ups</div>
+          <div class="feature-desc">Earn coins for correct answers, spend them on hints and power-ups wisely</div>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🔥</span>
@@ -380,18 +380,17 @@
           <span class="topic-tag">ascii-web</span>
           <span class="topic-tag">go-reloaded</span>
           <span class="topic-tag">lem-in</span>
-          <span class="topic-tag">forum</span>
           <span class="topic-tag">groupie-tracker</span>
-          <span class="topic-tag">net-cat</span>
-          <span class="topic-tag">my-ls</span>
+          <span class="topic-tag">normal golang</span>
+          <span class="topic-tag">maps & structs</span>
           <span class="topic-tag">blockchain</span>
-          <span class="topic-tag">make-your-game</span>
-          <span class="topic-tag">strings</span>
+          <span class="topic-tag">strings MANIPULATION</span>
           <span class="topic-tag">goroutines</span>
           <span class="topic-tag">interfaces</span>
           <span class="topic-tag">context</span>
           <span class="topic-tag">testing</span>
           <span class="topic-tag">senior go</span>
+          <span class="topic-tag">packages and modules</span>
         </div>
       </div>
 
@@ -421,7 +420,7 @@
       </div>
       <div class="diff-row">
         <button class="diff-btn easy active" onclick="setDiff('easy', this)">
-          🟢 Easy<span class="diff-label">35s / Q</span>
+          🟢 Easy<span class="diff-label">30s / Q</span>
         </button>
         <button class="diff-btn medium" onclick="setDiff('medium', this)">
           🟡 Medium<span class="diff-label">25s / Q</span>
@@ -444,7 +443,7 @@
         <button class="quit-btn" onclick="requestQuit()">✕ Quit</button>
       </div>
       <div id="quitConfirmBox" class="quit-confirm" style="display:none;">
-        <p>Quit this quiz? Your progress in this round will be lost — coins already earned are kept.</p>
+        <p>Quit this quiz? Your progress in this round will be lost — coins already earned are gone too.</p>
         <div class="quit-confirm-btns">
           <button class="qc-yes" onclick="confirmQuit()">Yes, quit</button>
           <button class="qc-no" onclick="cancelQuit()">Cancel</button>
@@ -499,7 +498,7 @@
     <!-- SHOP -->
     <div id="shopScreen" style="display:none;">
       <div class="shop-title">🛒 Power-Up Shop</div>
-      <div class="shop-sub">Spend coins earned from correct answers</div>
+      <div class="shop-sub">Spend coins earned from correct answers wisely</div>
       <div style="text-align:center;margin-bottom:16px;"><div class="coin-display" style="display:inline-flex;">🪙 <span id="coinInShop">0</span></div></div>
       <div class="shop-list" id="shopList"></div>
       <button class="lb-back" onclick="show('startScreen')">← Back</button>
@@ -2795,11 +2794,11 @@ const ACHIEVEMENTS = [
   { id: 'first_quiz',    icon: '🎓', name: 'First Steps',       desc: 'Complete your first quiz',                         check: s => s.stats.gamesPlayed >= 1 },
   { id: 'perfect',       icon: '💯', name: 'Perfect Round',     desc: 'Score 100% in a round',                            check: s => s.stats.perfectRounds >= 1 },
   { id: 'century',       icon: '📚', name: 'Century Club',      desc: 'Answer 100 questions correctly (lifetime)',        check: s => s.stats.correctTotal >= 100 },
-  { id: 'coin_collector',icon: '💰', name: 'Coin Collector',    desc: 'Earn 100 coins in total',                          check: s => s.stats.lifetimeCoins >= 100 },
+  { id: 'coin_collector',icon: '💰', name: 'Coin Collector',    desc: 'Earn 1000 coins in total',                          check: s => s.stats.lifetimeCoins >= 100 },
   { id: 'shopper',       icon: '🛍️', name: 'First Purchase',    desc: 'Buy something from the shop',                      check: s => s.stats.itemsBought >= 1 },
   { id: 'hard_mode',     icon: '🔴', name: 'No Fear',           desc: 'Complete a quiz on Hard difficulty',               check: s => s.stats.hardCompleted >= 1 },
-  { id: 'streak5',       icon: '🔥', name: 'On Fire',           desc: 'Get 5 correct answers in a row',                   check: s => s.stats.bestStreak >= 5 },
-  { id: 'daily3',        icon: '📅', name: 'Habit Former',      desc: 'Reach a 3-day Daily Challenge streak',             check: s => s.stats.dailyStreak >= 3 },
+  { id: 'streak25',       icon: '🔥', name: 'On Fire',           desc: 'Get 25 correct answers in a row',                   check: s => s.stats.bestStreak >= 5 },
+  { id: 'daily10',        icon: '📅', name: 'Habit Former',      desc: 'Reach a 10-day Daily Challenge streak',             check: s => s.stats.dailyStreak >= 3 },
   { id: 'daily7',        icon: '🗓️', name: 'Dedicated Gopher',  desc: 'Reach a 7-day Daily Challenge streak',             check: s => s.stats.dailyStreak >= 7 },
   { id: 'marathon',      icon: '🏃', name: 'Marathoner',        desc: 'Play 10 quizzes',                                  check: s => s.stats.gamesPlayed >= 10 }
 ];
@@ -2824,7 +2823,7 @@ function showAchievements() {
     const unlocked = state.achievements.includes(a.id);
     return `
       <div class="ach-item ${unlocked ? 'unlocked' : ''}">
-        <div class="ai-icon">${unlocked ? a.icon : '🔒'}</div>
+        <div class="ai-icon">${unlocked ? a.icon : '😜'}</div>
         <div class="ai-info">
           <div class="ai-name">${escapeHtml(a.name)}</div>
           <div class="ai-desc">${escapeHtml(a.desc)}</div>
@@ -2835,9 +2834,9 @@ function showAchievements() {
 
 // ── SHOP ─────────────────────────────────────────────────────
 const SHOP_ITEMS = [
-  { id: 'hint50', icon: '✂️', name: '50/50 Hint',  desc: 'Removes two incorrect options from the current question', price: 20 },
-  { id: 'freeze', icon: '🧊', name: 'Time Freeze', desc: 'Adds 10 extra seconds to the timer',                       price: 15 },
-  { id: 'skip',   icon: '⏭',  name: 'Skip Token',  desc: 'Skip a question with no penalty to your streak',          price: 15 }
+  { id: 'hint50', icon: '✂️', name: '50/50 Hint',  desc: 'Removes two incorrect options from the current question', price: 80 },
+  { id: 'freeze', icon: '🧊', name: 'Time Freeze', desc: 'Adds 10 extra seconds to the timer',                       price: 90 },
+  { id: 'skip',   icon: '⏭',  name: 'Skip Token',  desc: 'Skip a question with no penalty to your streak',          price: 110 }
 ];
 
 function showShop() {
@@ -3080,7 +3079,7 @@ function selectAnswer(index, btn) {
     if (streak > (state.stats.bestStreak || 0)) state.stats.bestStreak = streak;
     state.stats.correctTotal = (state.stats.correctTotal || 0) + 1;
     let earned = 2, bonusMsg = '';
-    if (streak > 0 && streak % 5 === 0) { earned += 5; bonusMsg = ' 🔥 Streak bonus +5!'; }
+    if (streak > 0 && streak % 2 === 0) { earned += 2; bonusMsg = ' 🔥 Streak bonus +2!'; }
     addCoins(earned);
     document.getElementById('scoreLabel').textContent = `Score: ${score}`;
     fb.textContent = `✓ Correct! +${earned} 🪙${bonusMsg} ` + q.explanation;
@@ -3186,7 +3185,7 @@ function showScore() {
     if (state.stats.lastDailyDate !== today) {
       state.stats.dailyStreak = isYesterdayStr(state.stats.lastDailyDate) ? (state.stats.dailyStreak || 0) + 1 : 1;
       state.stats.lastDailyDate = today;
-      const streakBonus = Math.min(state.stats.dailyStreak * 2, 20);
+      const streakBonus = Math.min(state.stats.dailyStreak * 2, 50);
       bonusCoins += 15 + streakBonus;
       showToast('🔥', 'Daily Challenge Complete!', `Streak: ${state.stats.dailyStreak} day(s)`);
     }
@@ -3211,7 +3210,7 @@ function showScore() {
   else if (pct >= 0.8) { title = 'Go Expert!';      msg = "Impressive! You clearly write Go in your sleep."; }
   else if (pct >= 0.6) { title = 'Solid Go Dev!';   msg = "Nice work! Brush up on the trickier topics to level up."; }
   else if (pct >= 0.4) { title = 'Getting There!';  msg = "You know some Go! Keep practicing."; }
-  else                 { title = 'Keep Coding!';     msg = "Go has a steep curve — review the basics and try again!"; }
+  else                 { title = 'agba coder!';     msg = "Go has a steep curve — review the basics and try again!"; }
   document.getElementById('scoreTitle').textContent = title;
   document.getElementById('scoreMsg').textContent = msg;
 }
