@@ -376,19 +376,19 @@
       <div class="welcome-topics">
         <div class="topics-title">📚 Topics Covered</div>
         <div class="topics-grid">
-          <span class="topic-tag">ascii-art</span>
-          <span class="topic-tag">ascii-web</span>
+          <span class="topic-tag">ascii-art and ascii-web</span>
+          <span class="topic-tag">unicode and rune</span>
           <span class="topic-tag">go-reloaded</span>
           <span class="topic-tag">lem-in and forum</span>
           <span class="topic-tag">groupie-tracker</span>
           <span class="topic-tag">normal golang</span>
-          <span class="topic-tag">maps & structs</span>
+          <span class="topic-tag">maps & slices</span>
           <span class="topic-tag">blockchain</span>
           <span class="topic-tag">strings MANIPULATION</span>
           <span class="topic-tag">goroutines</span>
           <span class="topic-tag">interfaces</span>
-          <span class="topic-tag">context</span>
-          <span class="topic-tag">testing</span>
+          <span class="topic-tag">Error handling</span>
+          <span class="topic-tag">testing in vs code</span>
           <span class="topic-tag">senior go</span>
           <span class="topic-tag">packages and modules</span>
         </div>
@@ -443,7 +443,7 @@
         <button class="quit-btn" onclick="requestQuit()">✕ Quit</button>
       </div>
       <div id="quitConfirmBox" class="quit-confirm" style="display:none;">
-        <p>Quit this quiz? Your progress in this round will be lost.</p>
+        <p>Quit this quiz? Your progress in this round will be lost But earn coins are kept.</p>
         <div class="quit-confirm-btns">
           <button class="qc-yes" onclick="confirmQuit()">Yes, quit</button>
           <button class="qc-no" onclick="cancelQuit()">Cancel</button>
@@ -542,7 +542,7 @@ const ALL_QUESTIONS = [
     explanation: "(hex) converts the preceding word, treated as a hexadecimal number, into its decimal equivalent."
   },
   {
-    q: "What should the output be for the input: 'Simply add 42 (hex) to the result'?",
+    q: "In Go Reloaded, What should the output be for the input: 'Simply add 42 (hex) to the result'?",
     options: [
       "Simply add 2A to the result",
       "Simply add 66 to the result",
@@ -564,7 +564,7 @@ const ALL_QUESTIONS = [
     explanation: "(bin) converts the preceding word, treated as a binary number, into its decimal equivalent."
   },
   {
-    q: "What is the correct output for: 'It has been 10 (bin) years'?",
+    q: "In Go Reloaded What is the correct output for: 'It has been 10 (bin) years'?",
     options: ["It has been 10 years", "It has been 2 years", "It has been 1010 years", "It has been 0b10 years"],
     answer: 1,
     explanation: "10 in binary is 2 in decimal. The (bin) modifier converts the binary number to its decimal form."
@@ -634,17 +634,6 @@ const ALL_QUESTIONS = [
     ],
     answer: 3,
     explanation: "Single quotes follow the rule: no space after the opening quote and no space before the closing quote — the content sits snug inside."
-  },
-  {
-    q: "What is the correct output for: 'I am (up) very (low) HAPPY'?",
-    options: [
-      "I AM very happy",
-      "I AM VERY happy",
-      "I am VERY happy",
-      "I AM very HAPPY"
-    ],
-    answer: 0,
-    explanation: "(up) uppercases 'am' → 'AM', and (low) lowercases 'VERY' → 'very'. 'HAPPY' is untouched."
   },
   {
     q: "Which Go package is most useful for splitting a string into words in Go Reloaded?",
@@ -1057,7 +1046,7 @@ const ALL_QUESTIONS = [
   {
     q: "In Go Reloaded, what happens to '(cap, 0)'?",
     options: [
-      "Capitalizes 0 words (does nothing)",
+      "Capitalizes 0 words",
       "Capitalizes all words",
       "Causes a panic",
       "Capitalizes the next word"
@@ -2021,9 +2010,9 @@ const ALL_QUESTIONS = [
   },
   {
     q: "What port does ascii-web typically listen on?",
-    options: ["Port 80", "Port 8080", "Port 3000", "Port 443"],
+    options: ["Port :80", "Port :8080", "Port :3000", "Port :443"],
     answer: 1,
-    explanation: "ascii-web conventionally uses port 8080. http.ListenAndServe(\":8080\", nil) starts the server using the default ServeMux."
+    explanation: "ascii-web conventionally uses port :8080. http.ListenAndServe(\":8080\", nil) starts the server using the default ServeMux."
   },
   {
     q: "In ascii-web, what should the server return if the banner font file is missing?",
