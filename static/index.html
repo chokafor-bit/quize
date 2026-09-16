@@ -190,7 +190,25 @@
     transition: all 0.18s ease;
   }
   .lb-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .lb-title { font-family: 'Bebas Neue', cursive; font-size: 32px; letter-spacing: 3px; color: var(--accent); margin-bottom: 20px; text-align: center; }
+  .lb-title { font-family: 'Bebas Neue', cursive; font-size: 32px; letter-spacing: 3px; color: var(--accent); margin-bottom: 14px; text-align: center; }
+  .lb-tabs { display: flex; gap: 6px; margin-bottom: 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 5px; }
+  .lb-tab {
+    flex: 1; padding: 9px 4px; border: none; border-radius: 8px; background: transparent;
+    color: var(--muted); cursor: pointer; font-family: 'Bebas Neue', cursive;
+    font-size: 15px; letter-spacing: 1.5px; transition: all 0.18s ease; white-space: nowrap;
+  }
+  .lb-tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.03); }
+  .lb-tab.active { color: #000; }
+  .lb-tab.all.active    { background: var(--accent); }
+  .lb-tab.easy.active   { background: var(--correct); }
+  .lb-tab.medium.active { background: #f5c842; }
+  .lb-tab.hard.active   { background: var(--accent2); color: #fff; }
+  .lb-tab.daily.active  { background: linear-gradient(135deg, var(--accent2), #ff6b9d); color: #fff; }
+  .lb-diff-chip { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 7px; border-radius: 99px; letter-spacing: 0.5px; vertical-align: middle; }
+  .lb-diff-chip.easy   { background: rgba(61,220,132,0.12); color: var(--correct); border: 1px solid rgba(61,220,132,0.3); }
+  .lb-diff-chip.medium { background: rgba(245,200,66,0.12); color: #f5c842; border: 1px solid rgba(245,200,66,0.3); }
+  .lb-diff-chip.hard   { background: rgba(206,50,98,0.14); color: #ff6b93; border: 1px solid rgba(206,50,98,0.35); }
+  .lb-diff-chip.daily  { background: rgba(0,172,215,0.12); color: var(--accent); border: 1px solid rgba(0,172,215,0.3); }
   .lb-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
   .lb-item {
     display: flex; align-items: center; gap: 14px;
@@ -475,6 +493,9 @@
         </div>
         <div class="score-title" id="scoreTitle"></div>
         <div class="score-msg" id="scoreMsg"></div>
+        <div style="margin-top:16px;font-size:14px;color:var(--accent);font-family:'Bebas Neue',cursive;letter-spacing:1px;">
+          🪙 <span id="coinsEarned">0</span> Coins Earned
+        </div>
       </div>
       <div style="margin-top:20px;">
         <p style="color:var(--muted);font-size:13px;margin-bottom:10px;text-align:center;">Save your score to the leaderboard:</p>
@@ -491,6 +512,13 @@
     <!-- LEADERBOARD -->
     <div id="lbScreen" style="display:none;">
       <div class="lb-title">🏆 Leaderboard</div>
+      <div class="lb-tabs">
+        <button class="lb-tab all active" data-diff="all"    onclick="setLbFilter('all', this)">All</button>
+        <button class="lb-tab easy"       data-diff="easy"   onclick="setLbFilter('easy', this)">😁 Easy</button>
+        <button class="lb-tab medium"     data-diff="medium" onclick="setLbFilter('medium', this)">🥶 Medium</button>
+        <button class="lb-tab hard"       data-diff="hard"   onclick="setLbFilter('hard', this)">☠️ Hard</button>
+        <button class="lb-tab daily"      data-diff="daily"  onclick="setLbFilter('daily', this)">🔥 Daily</button>
+      </div>
       <ul class="lb-list" id="lbList"></ul>
       <button class="lb-back" onclick="show('startScreen')">← Back</button>
     </div>
@@ -2670,6 +2698,10 @@ let difficulty = 'easy';
 let timerSeconds = 30, timerInterval = null;
 let visitorName = '';
 let isDailyMode = false;
+let lastRoundDiff = 'easy';   // difficulty of the round being played ('daily' for the Daily Challenge)
+let lbFilter = 'all';         // which leaderboard tab is selected
+let lbCache = [];             // last leaderboard payload from the server
+let coinsEarnedThisRound = 0; // track coins earned during this quiz
 const DIFF_TIME = { easy: 30, medium: 25, hard: 15 };
 const letters = ['A','B','C','D'];
 
@@ -2757,8 +2789,10 @@ function refreshCoinDisplays() {
 
 function addCoins(n) {
   state.coins += n;
+  coinsEarnedThisRound += n;
   state.stats.lifetimeCoins = (state.stats.lifetimeCoins || 0) + n;
   refreshCoinDisplays();
+  showToast('🪙', `+${n} Coins`, `Total this round: ${coinsEarnedThisRound}`);
   saveState();
 }
 
@@ -2910,6 +2944,8 @@ function showDailyChallenge() {
 function startDailyChallenge() {
   isDailyMode = true;
   difficulty = 'medium';
+  lastRoundDiff = 'daily';
+  coinsEarnedThisRound = 0;
   const seed = dateSeed(todayStr());
   questions = seededShuffle(ALL_QUESTIONS, seed).slice(0, DAILY_QUESTION_COUNT);
   current = 0; score = 0; answered = false; streak = 0;
@@ -2929,6 +2965,8 @@ function setDiff(d, btn) {
 
 function startQuiz() {
   isDailyMode = false;
+  lastRoundDiff = difficulty;
+  coinsEarnedThisRound = 0;
   questions = shuffle(ALL_QUESTIONS).slice(0, QUESTIONS_PER_ROUND);
   current = 0; score = 0; answered = false; streak = 0;
   document.getElementById('progressBar').style.width = '0%';
@@ -3161,6 +3199,7 @@ function showScore() {
   show('scoreScreen');
   document.getElementById('finalScore').textContent = score;
   document.getElementById('finalTotal').textContent = questions.length;
+  document.getElementById('coinsEarned').textContent = coinsEarnedThisRound;
 
   state.stats.gamesPlayed = (state.stats.gamesPlayed || 0) + 1;
   if (score === questions.length) state.stats.perfectRounds = (state.stats.perfectRounds || 0) + 1;
@@ -3215,41 +3254,96 @@ async function saveScore() {
     const res = await fetch('/api/leaderboard', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, score, total: questions.length, diff: difficulty })
+      body: JSON.stringify({ name, score, total: questions.length, diff: lastRoundDiff })
     });
     if (!res.ok) throw new Error('Server error');
     document.getElementById('savedMsg').style.display = 'block';
     document.getElementById('playerName').disabled = true;
+    lbFilter = lastRoundDiff;   // jump straight to the board this score landed on
   } catch (e) {
     saveBtns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
     alert('Could not save score. Is the server running?');
   }
 }
 
+// Difficulty weights: harder difficulties rank higher with the same score.
+// A Hard 12/15 (80%) beats an Easy 15/15 (100%) because Hard is tougher.
+const DIFF_WEIGHTS = { easy: 1.0, medium: 1.5, hard: 2.0, daily: 1.0 };
+
+function getWeightedScore(entry) {
+  const pct = entry.total ? entry.score / entry.total : 0;
+  const weight = DIFF_WEIGHTS[(entry.diff || '').toLowerCase()] || 1.0;
+  return pct * weight;
+}
+
+function sortEntries(list) {
+  return [...list].sort((a, b) => {
+    // 1. Sort by weighted score (difficulty × percentage)
+    const wa = getWeightedScore(a), wb = getWeightedScore(b);
+    if (wb !== wa) return wb - wa;
+    // 2. Tiebreak: raw score (more questions correct wins)
+    if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
+    // 3. Tiebreak: earliest date (first to achieve the score wins)
+    return new Date(a.date || 0) - new Date(b.date || 0);
+  });
+}
+
+function setLbFilter(diff, btn) {
+  lbFilter = diff;
+  document.querySelectorAll('.lb-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderLeaderboard();
+}
+
+function syncLbTabs() {
+  document.querySelectorAll('.lb-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.diff === lbFilter);
+  });
+}
+
+function renderLeaderboard() {
+  const list = document.getElementById('lbList');
+  const rows = lbFilter === 'all' ? lbCache : lbCache.filter(e => (e.diff || '') === lbFilter);
+
+  if (!rows.length) {
+    list.innerHTML = lbFilter === 'all'
+      ? '<div class="lb-empty">No scores yet. Play a round and save your score!</div>'
+      : `<div class="lb-empty">No ${lbFilter} scores yet — be the first.</div>`;
+    return;
+  }
+
+  const medals = ['gold','silver','bronze'];
+  list.innerHTML = sortEntries(rows).slice(0, 10).map((e, i) => {
+    const date = e.date ? new Date(e.date).toLocaleDateString() : '';
+    const d = (e.diff || '').toLowerCase();
+    let chip = '';
+    if (d === 'daily') {
+      chip = `<span class="lb-diff-chip daily">📅 DAILY</span>`;
+    } else if (d) {
+      chip = `<span class="lb-diff-chip ${d}">${d.toUpperCase()}</span>`;
+    }
+    return `
+      <li class="lb-item ${medals[i] || ''}">
+        <div class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</div>
+        <div class="lb-info">
+          <div class="lb-score-name">${escapeHtml(e.name)}</div>
+          <div class="lb-meta">${chip} ${date}</div>
+        </div>
+        <div class="lb-score-val">${e.score}<span style="font-size:14px;color:var(--muted)">/${e.total}</span></div>
+      </li>`;
+  }).join('');
+}
+
 async function showLeaderboard() {
   show('lbScreen');
+  syncLbTabs();
   const list = document.getElementById('lbList');
   list.innerHTML = '<div class="lb-empty">Loading...</div>';
   try {
     const res = await fetch('/api/leaderboard');
     const lb = await res.json();
-    if (!lb || lb.length === 0) {
-      list.innerHTML = '<div class="lb-empty">No scores yet. Play a round and save your score!</div>';
-      return;
-    }
-    const medals = ['gold','silver','bronze'];
-    list.innerHTML = lb.slice(0, 10).map((e, i) => {
-      const date = e.date ? new Date(e.date).toLocaleDateString() : '';
-      return `
-        <li class="lb-item ${medals[i] || ''}">
-          <div class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</div>
-          <div class="lb-info">
-            <div class="lb-score-name">${escapeHtml(e.name)}</div>
-            <div class="lb-meta">${(e.diff||'').toUpperCase()} · ${date}</div>
-          </div>
-          <div class="lb-score-val">${e.score}<span style="font-size:14px;color:var(--muted)">/${e.total}</span></div>
-        </li>`;
-    }).join('');
+    lbCache = Array.isArray(lb) ? lb : [];
+    renderLeaderboard();
   } catch (err) {
     list.innerHTML = '<div class="lb-empty">Could not load scores. Is the server running?</div>';
   }
