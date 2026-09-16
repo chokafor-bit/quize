@@ -184,7 +184,7 @@
 
   /* LEADERBOARD */
   .lb-btn {
-    margin-top: 12px; width: 100%; padding: 12px; background: transparent;
+    margin-top: 14px; width: 100%; padding: 14px; background: transparent;
     border: 1.5px solid var(--border); border-radius: 12px; color: var(--muted);
     cursor: pointer; font-family: 'Bebas Neue', cursive; font-size: 17px; letter-spacing: 3px;
     transition: all 0.18s ease;
@@ -324,7 +324,7 @@
 
   <div id="progressArea" style="display:none;">
     <div class="progress-label">
-      <span id="qLabel">Question 1 of 25</span>
+      <span id="qLabel">Question 1 of 15</span>
       <span id="scoreLabel">Score: 0</span>
     </div>
     <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
@@ -359,7 +359,7 @@
         <div class="feature-card">
           <span class="feature-icon">🔀</span>
           <div class="feature-title">Always Fresh</div>
-          <div class="feature-desc">25 random questions each round 🤖</div>
+          <div class="feature-desc">15 random questions each round 🤖</div>
         </div>
         <div class="feature-card">
           <span class="feature-icon">🪙</span>
@@ -415,7 +415,7 @@
       <p>Pick a difficulty and test your Go knowledge!</p>
       <div class="stats-row">
         <div class="stat-pill"><div class="num">252</div><div class="lbl">Questions</div></div>
-        <div class="stat-pill"><div class="num">25</div><div class="lbl">Per Round</div></div>
+        <div class="stat-pill"><div class="num">15</div><div class="lbl">Per Round</div></div>
         <div class="stat-pill"><div class="num">∞</div><div class="lbl">Replays</div></div>
       </div>
       <div class="diff-row">
@@ -471,7 +471,7 @@
       <div style="text-align:center;">
         <div class="score-circle">
           <div class="score-num" id="finalScore">0</div>
-          <div class="score-denom">/ 25</div>
+          <div class="score-denom">/ <span id="finalTotal">15</span></div>
         </div>
         <div class="score-title" id="scoreTitle"></div>
         <div class="score-msg" id="scoreMsg"></div>
@@ -526,7 +526,6 @@
     </div>
   </div>
 </div>
-
 <script>
 const ALL_QUESTIONS = [
   // ── GO RELOADED ──────────────────────────────────────────────
@@ -2663,12 +2662,15 @@ const ALL_QUESTIONS = [
 
 ];
 
+const QUESTIONS_PER_ROUND = 15;
+const DAILY_QUESTION_COUNT = 10;
+
 let questions = [], current = 0, score = 0, answered = false, streak = 0;
 let difficulty = 'easy';
 let timerSeconds = 30, timerInterval = null;
 let visitorName = '';
 let isDailyMode = false;
-const DIFF_TIME = { easy: 30, medium: 20, hard: 10 };
+const DIFF_TIME = { easy: 30, medium: 25, hard: 15 };
 const letters = ['A','B','C','D'];
 
 const GREETINGS = [
@@ -2909,7 +2911,7 @@ function startDailyChallenge() {
   isDailyMode = true;
   difficulty = 'medium';
   const seed = dateSeed(todayStr());
-  questions = seededShuffle(ALL_QUESTIONS, seed).slice(0, 10);
+  questions = seededShuffle(ALL_QUESTIONS, seed).slice(0, DAILY_QUESTION_COUNT);
   current = 0; score = 0; answered = false; streak = 0;
   document.getElementById('progressBar').style.width = '0%';
   document.getElementById('savedMsg').style.display = 'none';
@@ -2927,7 +2929,7 @@ function setDiff(d, btn) {
 
 function startQuiz() {
   isDailyMode = false;
-  questions = shuffle(ALL_QUESTIONS).slice(0, 25);
+  questions = shuffle(ALL_QUESTIONS).slice(0, QUESTIONS_PER_ROUND);
   current = 0; score = 0; answered = false; streak = 0;
   document.getElementById('progressBar').style.width = '0%';
   document.getElementById('savedMsg').style.display = 'none';
@@ -3158,6 +3160,7 @@ function showScore() {
   document.getElementById('qLabel').textContent = 'Quiz Complete';
   show('scoreScreen');
   document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalTotal').textContent = questions.length;
 
   state.stats.gamesPlayed = (state.stats.gamesPlayed || 0) + 1;
   if (score === questions.length) state.stats.perfectRounds = (state.stats.perfectRounds || 0) + 1;
