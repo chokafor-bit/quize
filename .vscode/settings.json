@@ -1,0 +1,11 @@
+{
+    "chat.agent.sandbox.advanced.runtime": {
+
+        "enableWeakerNestedSandbox": false
+    },
+    "chat.agent.thinking.phrases": {
+        
+        "mode": "append",
+        "phrases": []
+    }
+}

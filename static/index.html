@@ -416,7 +416,16 @@
         <label>👤 Your name (for the leaderboard) if not you will be anonymous</label>
         <input type="text" id="visitorName" placeholder="Enter your name..." maxlength="20"
           onfocus="this.style.borderColor='#00acd7'" onblur="this.style.borderColor='#2a2a2a'"
+          oninput="togglePinField()"
+          onkeydown="if(event.key==='Enter'){ if(document.getElementById('pinFormWrap').style.display==='none'){ togglePinField(); document.getElementById('visitorPin').focus(); } else { enterApp(); } }" />
+      </div>
+      <div class="name-form" id="pinFormWrap" style="display:none;">
+        <label>🔒 4-digit PIN (keeps your coins yours — someone else with your name needs this too)</label>
+        <input type="password" id="visitorPin" placeholder="••••" maxlength="4" inputmode="numeric" pattern="[0-9]*"
+          onfocus="this.style.borderColor='#00acd7'" onblur="this.style.borderColor='#2a2a2a'"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
           onkeydown="if(event.key==='Enter') enterApp()" />
+        <p id="pinHint" style="margin-top:6px;color:#666;font-size:11px;"></p>
       </div>
       <button class="enter-btn" onclick="enterApp()">Let's Go 😈</button>
       <p style="margin-top:14px;color:#444;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Built by Chekus Joseph</p>
@@ -2739,13 +2748,54 @@ function show(id) {
 // balance — which is what makes "being remembered" possible across
 // sessions/devices, but also means names act as a simple public ID:
 // two different people who pick the same name will share one balance.
+// A 4-digit PIN goes alongside the name so two different people typing
+// the same name don't collide. It's kept in a shared "registry" record
+// (name-slug -> pin) so we can tell "wrong PIN" apart from "new name".
+// This is a lightweight collision guard, not real account security —
+// the PIN is stored in plain text and there's no way to recover a
+// forgotten one other than picking a new name.
 const ANON_KEY = 'quiz-progress-anon';
+const REGISTRY_KEY = 'name-registry';
 let currentStorageKey = ANON_KEY;
 let currentStorageShared = false;
 
-function playerKey(name) {
+function slugify(name) {
   const slug = name.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '');
-  return 'player:' + (slug || 'anon');
+  return slug || 'anon';
+}
+
+function playerKey(slug) {
+  return 'player:' + slug;
+}
+
+async function loadRegistry() {
+  try {
+    const res = await window.storage.get(REGISTRY_KEY, true);
+    if (res && res.value) return JSON.parse(res.value);
+  } catch (e) {
+    // no registry saved yet
+  }
+  return {};
+}
+
+async function registerNamePin(slug, pin) {
+  const reg = await loadRegistry();
+  reg[slug] = pin;
+  try { await window.storage.set(REGISTRY_KEY, JSON.stringify(reg), true); }
+  catch (e) { console.error('Could not save name registry', e); }
+}
+
+function togglePinField() {
+  const name = document.getElementById('visitorName').value.trim();
+  const wrap = document.getElementById('pinFormWrap');
+  const hint = document.getElementById('pinHint');
+  if (name) {
+    wrap.style.display = 'block';
+    hint.textContent = "New name? Pick any 4 digits — you'll need the same ones next time to get this exact save back.";
+    hint.style.color = '#666';
+  } else {
+    wrap.style.display = 'none';
+  }
 }
 
 function defaultState() {
@@ -2763,16 +2813,56 @@ function defaultState() {
 
 let state = defaultState();
 
-function enterApp() {
-  const input = document.getElementById('visitorName');
-  visitorName = input.value.trim();
-  loadPlayer(visitorName);
+async function enterApp() {
+  const nameInput = document.getElementById('visitorName');
+  const pinWrap = document.getElementById('pinFormWrap');
+  const pinInput = document.getElementById('visitorPin');
+  const pinHint = document.getElementById('pinHint');
+  const name = nameInput.value.trim();
+
+  if (!name) {
+    visitorName = '';
+    await loadPlayer('', null);
+    return;
+  }
+
+  // Name entered but the PIN field isn't showing yet — reveal it and stop here.
+  if (pinWrap.style.display === 'none') {
+    togglePinField();
+    pinInput.focus();
+    return;
+  }
+
+  const pin = pinInput.value.trim();
+  if (!/^\d{4}$/.test(pin)) {
+    pinHint.textContent = '⚠️ Enter exactly 4 digits.';
+    pinHint.style.color = '#ff8f8f';
+    pinInput.focus();
+    return;
+  }
+
+  const slug = slugify(name);
+  const registry = await loadRegistry();
+  if (registry[slug]) {
+    if (registry[slug] !== pin) {
+      pinHint.textContent = '⚠️ Wrong PIN for that name. Try again, or use a different name.';
+      pinHint.style.color = '#ff8f8f';
+      pinInput.value = '';
+      pinInput.focus();
+      return;
+    }
+  } else {
+    await registerNamePin(slug, pin);
+  }
+
+  visitorName = name;
+  await loadPlayer(name, slug);
 }
 
-async function loadPlayer(name) {
+async function loadPlayer(name, slug) {
   const isNamed = !!name;
-  currentStorageKey = isNamed ? playerKey(name) : ANON_KEY;
-  currentStorageShared = isNamed; // named players are stored in shared space so any device can find them by name
+  currentStorageKey = isNamed ? playerKey(slug) : ANON_KEY;
+  currentStorageShared = isNamed; // named players are stored in shared space so any device can find them by name+PIN
 
   let loaded = null;
   try {
@@ -3175,9 +3265,9 @@ function refreshInventoryUI() {
   document.getElementById('hintCount').textContent = state.inventory.hint50 || 0;
   document.getElementById('freezeCount').textContent = state.inventory.freeze || 0;
   document.getElementById('skipCount').textContent = state.inventory.skip || 0;
-  hintBtn.disabled = answered || !(state.inventory.hint50 > 0);
-  freezeBtn.disabled = answered || !(state.inventory.freeze > 0);
-  skipBtn.disabled = answered || !(state.inventory.skip > 0);
+  hintBtn.enabled = answered || !(state.inventory.hint50 > 0);
+  freezeBtn.enabled = answered || !(state.inventory.freeze > 0);
+  skipBtn.enabled = answered || !(state.inventory.skip > 0);
   refreshCoinDisplays();
 }
 
@@ -3263,7 +3353,7 @@ function showScore() {
   // Reset save section so it's always clickable
   const input = document.getElementById('playerName');
   input.value = visitorName || '';
-  input.disabled = false;
+  input.enabled = true;
   input.style.opacity = '1';
   document.getElementById('savedMsg').style.display = 'none';
   const saveBtns = document.querySelectorAll('[onclick="saveScore()"]');
