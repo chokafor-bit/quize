@@ -1,0 +1,10 @@
+{
+  "name": "Imperative in Go Quiz",
+  "short_name": "Go Quiz",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080b18",
+  "theme_color": "#080b18",
+  "description": "A neon multiplayer Go programming quiz.",
+  "icons": []
+}
