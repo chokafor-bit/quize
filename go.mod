@@ -1,3 +1,3 @@
-module quiz-server
+module quizserver
 
-go 1.22.2
+go 1.20

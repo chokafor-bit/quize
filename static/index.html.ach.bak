@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Imperative in Go</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --card: #161616;
+    --accent: #00acd7;
+    --accent2: #ce3262;
+    --text: #f0f0f0; 
+    --muted: #666;
+    --correct: #3ddc84;
+    --wrong: #ff4f4f;
+    --border: #2a2a2a;
+    --code-bg: #0a0a0a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+    background-image: radial-gradient(circle at 15% 15%, #001a22 0%, transparent 50%),
+                      radial-gradient(circle at 85% 85%, #1a0010 0%, transparent 50%);
+  }
+  .container { width: 100%; max-width: 660px; }
+
+  .header { text-align: center; margin-bottom: 36px; }
+  .header h1 {
+    font-family: 'Bebas Neue', cursive; font-size: clamp(56px, 13vw, 96px);
+    letter-spacing: 6px; line-height: 1;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .gopher { font-size: 28px; margin-bottom: 4px; display: block; }
+  .header p { color: var(--muted); font-size: 13px; letter-spacing: 3px; text-transform: uppercase; margin-top: 4px; }
+
+  #progressArea { display: none; margin-bottom: 16px; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 10px; letter-spacing: 1px; text-transform: uppercase; }
+  .progress-bar-wrap { background: var(--border); border-radius: 99px; height: 5px; overflow: hidden; }
+  .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 99px; transition: width 0.5s cubic-bezier(0.4,0,0.2,1); width: 0%; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 36px;
+    position: relative;
+  }
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    pointer-events: none; z-index: 0;
+  }
+  .card > * { position: relative; z-index: 1;
+  }
+
+  /* START */
+  .start-screen { text-align: center; }
+  .lang-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(0,172,215,0.08); border: 1px solid rgba(0,172,215,0.2);
+    border-radius: 99px; padding: 6px 16px; font-size: 12px; color: var(--accent);
+    letter-spacing: 1px; text-transform: uppercase; margin-bottom: 20px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .start-screen p { color: var(--muted); font-size: 15px; line-height: 1.7; margin-bottom: 10px; }
+  .stats-row { display: flex; gap: 12px; justify-content: center; margin: 20px 0 28px; }
+  .stat-pill {
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 18px; text-align: center;
+  }
+  .stat-pill .num { font-family: 'Bebas Neue', cursive; font-size: 26px; color: var(--accent); letter-spacing: 2px; }
+  .stat-pill .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  .start-btn {
+    width: 100%; padding: 17px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: 12px; color: #fff; cursor: pointer;
+    font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 4px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 8px 30px rgba(0,172,215,0.2);
+  }
+  .start-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,172,215,0.3); }
+
+  /* QUESTION */
+  .question-num { font-family: 'Bebas Neue', cursive; font-size: 13px; letter-spacing: 3px; color: var(--accent); margin-bottom: 12px; }
+  .question-text { font-size: clamp(16px, 3.5vw, 20px); font-weight: 700; line-height: 1.5; margin-bottom: 8px; }
+  .code-block {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 18px; margin: 12px 0 20px;
+    font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.7;
+    color: #c9d1d9; overflow-x: auto; white-space: pre;
+  }
+  .code-block .kw { color: #79c0ff; }
+  .code-block .fn { color: #d2a8ff; }
+  .code-block .str { color: #a5d6ff; }
+  .code-block .cm { color: #8b949e; }
+  .code-block .num { color: #f2cc60; }
+  .no-code { margin-bottom: 24px; }
+
+  .options { display: grid; gap: 10px; }
+  .option-btn {
+    background: transparent; border: 1.5px solid var(--border); border-radius: 12px;
+    color: var(--text); cursor: pointer; font-family: 'DM Sans', sans-serif;
+    font-size: 14px; font-weight: 500; padding: 14px 18px; text-align: left;
+    transition: all 0.18s ease; display: flex; align-items: center; gap: 12px;
+  }
+  .option-btn code { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: rgba(255,255,255,0.05); padding: 1px 6px; border-radius: 4px; }
+  .option-btn .letter {
+    width: 26px; height: 26px; border-radius: 7px; background: var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', cursive; font-size: 15px; flex-shrink: 0;
+    transition: all 0.18s ease; color: var(--muted);
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--accent); background: rgba(0,172,215,0.05); }
+  .option-btn:hover:not(:disabled) .letter { background: var(--accent); color: #000; }
+  .option-btn.correct { border-color: var(--correct); background: rgba(61,220,132,0.08); }
+  .option-btn.correct .letter { background: var(--correct); color: #000; }
+  .option-btn.wrong { border-color: var(--wrong); background: rgba(255,79,79,0.08); }
+  .option-btn.wrong .letter { background: var(--wrong); color: #fff; }
+  .option-btn:disabled { cursor: default; }
+
+  .feedback {
+    margin-top: 16px; padding: 13px 16px; border-radius: 10px;
+    font-size: 13px; font-weight: 500; display: none; line-height: 1.6;
+    animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .feedback.show { display: block; }
+  .feedback.correct-fb { background: rgba(61,220,132,0.1); color: var(--correct); border: 1px solid rgba(61,220,132,0.2); }
+  .feedback.wrong-fb { background: rgba(255,79,79,0.1); color: #ff8f8f; border: 1px solid rgba(255,79,79,0.2); }
+  @keyframes popIn { from { opacity:0; transform:translateY(6px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+
+  .next-btn {
+    margin-top: 20px; width: 100%; padding: 15px; background: var(--accent);
+    border: none; border-radius: 12px; color: #000; cursor: pointer;
+    font-family: 'Bebas Neue', cursive; font-size: 19px; letter-spacing: 3px;
+    display: none; transition: transform 0.15s ease;
+  }
+  .next-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+  .next-btn.show { display: block; animation: popIn 0.3s ease; }
+
+  /* SCORE */
+  .score-screen { text-align: center; }
+  .score-circle {
+    width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--accent);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    margin: 0 auto 24px; background: rgba(0,172,215,0.05); box-shadow: 0 0 40px rgba(0,172,215,0.15);
+  }
+  .score-num { font-family: 'Bebas Neue', cursive; font-size: 52px; line-height: 1; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .score-denom { font-size: 11px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  .score-title { font-family: 'Bebas Neue', cursive; font-size: 38px; letter-spacing: 3px; margin-bottom: 8px; }
+  .score-msg { color: var(--muted); font-size: 14px; margin-bottom: 28px; line-height: 1.6; }
+  .btn-row { display: flex; gap: 12px; justify-content: center; }
+  .restart-btn {
+    padding: 14px 36px; background: var(--accent); border: none; border-radius: 12px;
+    color: #000; cursor: pointer; font-family: 'Bebas Neue', cursive; font-size: 19px; letter-spacing: 3px;
+    transition: transform 0.15s ease;
+  }
+  .restart-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+  /* DIFFICULTY */
+  .diff-row { display: flex; gap: 10px; justify-content: center; margin: 20px 0 24px; }
+  .diff-btn {
+    flex: 1; padding: 12px 8px; border-radius: 12px; border: 1.5px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer;
+    font-family: 'Bebas Neue', cursive; font-size: 17px; letter-spacing: 2px;
+    transition: all 0.18s ease;
+  }
+  .diff-btn:hover { border-color: var(--accent); color: var(--text); }
+  .diff-btn.active { color: #000; border-color: transparent; }
+  .diff-btn.easy.active  { background: var(--correct); }
+  .diff-btn.medium.active { background: #f5c842; }
+  .diff-btn.hard.active  { background: var(--accent2); color: #fff; }
+  .diff-label { font-size: 11px; display: block; margin-top: 2px; letter-spacing: 1px; opacity: 0.8; font-family: 'DM Sans', sans-serif; font-weight: 500; }
+
+  /* TIMER */
+  .timer-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .timer-bar-bg { flex: 1; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .timer-bar { height: 100%; border-radius: 99px; transition: width 1s linear, background 0.5s ease; background: var(--correct); width: 100%; }
+  .timer-num { font-family: 'Bebas Neue', cursive; font-size: 20px; color: var(--accent); min-width: 28px; text-align: right; letter-spacing: 1px; }
+  .timer-num.urgent { color: var(--wrong); animation: pulse 0.5s infinite alternate; }
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.4; } }
+
+  /* LEADERBOARD */
+  .lb-btn {
+    margin-top: 14px; width: 100%; padding: 14px; background: transparent;
+    border: 1.5px solid var(--border); border-radius: 12px; color: var(--muted);
+    cursor: pointer; font-family: 'Bebas Neue', cursive; font-size: 17px; letter-spacing: 3px;
+    transition: all 0.18s ease;
+  }
+  .lb-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .lb-title { font-family: 'Bebas Neue', cursive; font-size: 32px; letter-spacing: 3px; color: var(--accent); margin-bottom: 14px; text-align: center; }
+  .lb-tabs { display: flex; gap: 6px; margin-bottom: 16px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 5px; }
+  .lb-tab {
+    flex: 1; padding: 9px 4px; border: none; border-radius: 8px; background: transparent;
+    color: var(--muted); cursor: pointer; font-family: 'Bebas Neue', cursive;
+    font-size: 15px; letter-spacing: 1.5px; transition: all 0.18s ease; white-space: nowrap;
+  }
+  .lb-tab:hover:not(.active) { color: var(--text); background: rgba(255,255,255,0.03); }
+  .lb-tab.active { color: #000; }
+  .lb-tab.all.active    { background: var(--accent); }
+  .lb-tab.easy.active   { background: var(--correct); }
+  .lb-tab.medium.active { background: #f5c842; }
+  .lb-tab.hard.active   { background: var(--accent2); color: #fff; }
+  .lb-tab.daily.active  { background: linear-gradient(135deg, var(--accent2), #ff6b9d); color: #fff; }
+  .lb-diff-chip { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 1px 7px; border-radius: 99px; letter-spacing: 0.5px; vertical-align: middle; }
+  .lb-diff-chip.easy   { background: rgba(61,220,132,0.12); color: var(--correct); border: 1px solid rgba(61,220,132,0.3); }
+  .lb-diff-chip.medium { background: rgba(245,200,66,0.12); color: #f5c842; border: 1px solid rgba(245,200,66,0.3); }
+  .lb-diff-chip.hard   { background: rgba(206,50,98,0.14); color: #ff6b93; border: 1px solid rgba(206,50,98,0.35); }
+  .lb-diff-chip.daily  { background: rgba(0,172,215,0.12); color: var(--accent); border: 1px solid rgba(0,172,215,0.3); }
+  .lb-list { list-style: none; display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+  .lb-item {
+    display: flex; align-items: center; gap: 14px;
+    background: rgba(255,255,255,0.02); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px;
+  }
+  .lb-item.gold   { border-color: #f5c842; background: rgba(245,200,66,0.06); }
+  .lb-item.silver { border-color: #aaa; background: rgba(170,170,170,0.05); }
+  .lb-item.bronze { border-color: #cd7f32; background: rgba(205,127,50,0.05); }
+  .lb-rank { font-family: 'Bebas Neue', cursive; font-size: 22px; min-width: 28px; color: var(--muted); }
+  .lb-item.gold   .lb-rank { color: #f5c842; }
+  .lb-item.silver .lb-rank { color: #ccc; }
+  .lb-item.bronze .lb-rank { color: #cd7f32; }
+  .lb-info { flex: 1; }
+  .lb-score-name { font-weight: 700; font-size: 14px; }
+  .lb-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .lb-score-val { font-family: 'Bebas Neue', cursive; font-size: 26px; color: var(--accent); letter-spacing: 1px; }
+  .lb-empty { text-align: center; color: var(--muted); font-size: 14px; padding: 20px 0; }
+  .lb-back {
+    width: 100%; padding: 13px; background: var(--accent); border: none; border-radius: 12px;
+    color: #000; cursor: pointer; font-family: 'Bebas Neue', cursive; font-size: 18px; letter-spacing: 3px;
+    transition: transform 0.15s;
+  }
+  .lb-back:hover { transform: translateY(-2px); }
+  .name-input {
+    width: 100%; padding: 12px 16px; background: #0d0d0d; border: 1.5px solid var(--border);
+    border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px;
+    outline: none; margin-bottom: 12px; transition: border-color 0.2s;
+  }
+  .name-input:focus { border-color: var(--accent); }
+  .save-btn {
+    width: 100%; padding: 13px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none; border-radius: 10px; color: #000; cursor: pointer;
+    font-family: 'Bebas Neue', cursive; font-size: 18px; letter-spacing: 3px;
+    transition: transform 0.15s; margin-bottom: 10px;
+  }
+  .save-btn:hover { transform: translateY(-2px); }
+  .saved-msg { color: var(--correct); font-size: 13px; text-align: center; display: none; margin-bottom: 8px; }
+
+  /* WELCOME PAGE */
+  .welcome-screen { text-align: center; }
+  .welcome-gopher { font-size: 56px; display: block; margin-bottom: 16px; animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  .welcome-title { font-family: 'Bebas Neue', cursive; font-size: clamp(28px, 7vw, 42px); letter-spacing: 4px; margin-bottom: 8px; }
+  .welcome-title span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .welcome-subtitle { color: var(--muted); font-size: 14px; line-height: 1.7; margin-bottom: 24px; }
+  .welcome-features { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; text-align: left; }
+  .feature-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .feature-icon { font-size: 20px; margin-bottom: 6px; display: block; }
+  .feature-title { font-family: 'Bebas Neue', cursive; font-size: 15px; letter-spacing: 2px; color: var(--accent); margin-bottom: 4px; }
+  .feature-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .welcome-topics { background: rgba(0,172,215,0.05); border: 1px solid rgba(0,172,215,0.15); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: left; }
+  .topics-title { font-family: 'Bebas Neue', cursive; font-size: 14px; letter-spacing: 2px; color: var(--accent); margin-bottom: 10px; }
+  .topics-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .topic-tag { background: rgba(0,172,215,0.1); border: 1px solid rgba(0,172,215,0.2); border-radius: 99px; padding: 4px 12px; font-size: 11px; color: var(--accent); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.5px; }
+  .name-form { margin-bottom: 20px; }
+  .name-form label { display: block; font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; text-align: left; }
+  .name-form input { width: 100%; padding: 12px 16px; background: #0d0d0d; border: 1.5px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; box-sizing: border-box; transition: border-color 0.2s; }
+  .name-form input:focus { border-color: var(--accent); }
+  .enter-btn { width: 100%; padding: 17px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border: none; border-radius: 12px; color: #fff; cursor: pointer; font-family: 'Bebas Neue', cursive; font-size: 22px; letter-spacing: 4px; transition: transform 0.15s ease, box-shadow 0.15s ease; box-shadow: 0 8px 30px rgba(0,172,215,0.2); }
+  .enter-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,172,215,0.3); }
+  .welcome-msg { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; min-height: 28px; }
+
+  /* COINS */
+  .coin-display { display:flex; align-items:center; gap:6px; background:rgba(245,200,66,0.08); border:1px solid rgba(245,200,66,0.25); border-radius:99px; padding:6px 14px; font-family:'Bebas Neue',cursive; font-size:16px; color:#f5c842; letter-spacing:1px; white-space:nowrap; }
+  .top-actions-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; gap:10px; }
+  .icon-round { flex:none; padding:8px 14px; border-radius:99px; background:rgba(255,255,255,0.03); border:1.5px solid var(--border); color:var(--text); cursor:pointer; font-size:16px; transition:all .18s ease; }
+  .icon-round:hover { border-color:var(--accent); }
+
+  /* POWER-UP BAR */
+  .icon-btn-row { display:flex; gap:8px; margin-top:14px; }
+  .icon-btn { flex:1; padding:10px 6px; background:rgba(255,255,255,0.03); border:1.5px solid var(--border); border-radius:10px; color:var(--text); cursor:pointer; font-family:'DM Sans',sans-serif; font-size:12px; text-align:center; transition:all .18s ease; }
+  .icon-btn:hover:not(:disabled) { border-color:var(--accent); }
+  .icon-btn:disabled { opacity:.35; cursor:not-allowed; }
+  .icon-btn .ic-count { display:block; font-family:'Bebas Neue',cursive; font-size:15px; color:var(--accent); margin-top:2px; }
+
+  /* QUIT */
+  .quiz-top-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .quit-btn { background:transparent; border:1.5px solid var(--border); color:var(--muted); border-radius:8px; padding:6px 12px; font-family:'Bebas Neue',cursive; font-size:13px; letter-spacing:2px; cursor:pointer; transition:all .18s ease; }
+  .quit-btn:hover { border-color:var(--wrong); color:var(--wrong); }
+  .quit-confirm { background:rgba(255,79,79,0.08); border:1px solid rgba(255,79,79,0.25); border-radius:12px; padding:14px; margin-bottom:14px; text-align:center; }
+  .quit-confirm p { font-size:12px; margin-bottom:10px; color:#ff8f8f; }
+  .quit-confirm-btns { display:flex; gap:10px; justify-content:center; }
+  .qc-yes { background:var(--wrong); color:#fff; border:none; border-radius:8px; padding:8px 18px; font-family:'Bebas Neue',cursive; letter-spacing:2px; cursor:pointer; }
+  .qc-no { background:transparent; border:1px solid var(--border); color:var(--text); border-radius:8px; padding:8px 18px; font-family:'Bebas Neue',cursive; letter-spacing:2px; cursor:pointer; }
+
+  /* SHOP / ACHIEVEMENTS / DAILY titles */
+  .shop-title, .ach-title, .daily-title { font-family:'Bebas Neue',cursive; font-size:32px; letter-spacing:3px; color:var(--accent); margin-bottom:6px; text-align:center; }
+  .shop-sub { text-align:center; color:var(--muted); font-size:12px; margin-bottom:20px; }
+
+  /* SHOP */
+  .shop-list { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+  .shop-item { display:flex; align-items:center; gap:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:14px 16px; }
+  .shop-item .si-icon { font-size:26px; }
+  .shop-item .si-info { flex:1; }
+  .shop-item .si-name { font-weight:700; font-size:14px; }
+  .shop-item .si-desc { font-size:12px; color:var(--muted); margin-top:2px; }
+  .shop-item .si-owned { font-size:11px; color:var(--accent); margin-top:2px; font-family:'JetBrains Mono',monospace; }
+  .buy-btn { background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; border-radius:8px; color:#000; padding:9px 16px; cursor:pointer; font-family:'Bebas Neue',cursive; font-size:14px; letter-spacing:1px; white-space:nowrap; }
+  .buy-btn:disabled { opacity:.4; cursor:not-allowed; background:var(--border); color:var(--muted); }
+
+  /* ACHIEVEMENTS */
+  .ach-list { display:flex; flex-direction:column; gap:10px; margin-bottom:20px; max-height:420px; overflow-y:auto; }
+  .ach-item { display:flex; align-items:center; gap:14px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:12px; padding:12px 16px; opacity:0.4; }
+  .ach-item.unlocked { opacity:1; border-color:rgba(245,200,66,0.3); background:rgba(245,200,66,0.05); }
+  .ach-item .ai-icon { font-size:24px; width:34px; text-align:center; }
+  .ach-item .ai-info { flex:1; }
+  .ach-item .ai-name { font-weight:700; font-size:14px; }
+  .ach-item .ai-desc { font-size:12px; color:var(--muted); margin-top:2px; }
+  .ach-progress { text-align:center; color:var(--muted); font-size:13px; margin-bottom:16px; }
+
+  /* DAILY */
+  .daily-card { background:rgba(206,50,98,0.06); border:1px solid rgba(206,50,98,0.2); border-radius:14px; padding:20px; text-align:center; margin-bottom:20px; }
+  .daily-streak { font-family:'Bebas Neue',cursive; font-size:42px; color:var(--accent2); }
+  .daily-streak-label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:2px; }
+  .daily-done-badge { display:inline-block; margin-top:10px; background:rgba(61,220,132,0.1); color:var(--correct); border:1px solid rgba(61,220,132,0.3); border-radius:99px; padding:6px 16px; font-size:12px; }
+
+  /* TOAST */
+  #toastArea { position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:999; display:flex; flex-direction:column; gap:8px; align-items:center; pointer-events:none; }
+  .toast { background:#161616; border:1.5px solid #f5c842; border-radius:12px; padding:12px 20px; display:flex; align-items:center; gap:10px; box-shadow:0 8px 30px rgba(0,0,0,0.4); animation: toastIn 0.35s cubic-bezier(0.34,1.56,0.64,1), toastOut 0.4s ease 2.6s forwards; font-size:13px; max-width:90vw; }
+  .toast .t-icon { font-size:22px; }
+  .toast .t-title { font-family:'Bebas Neue',cursive; letter-spacing:1px; color:#f5c842; font-size:14px; }
+  .toast .t-desc { color:#aaa; font-size:11px; }
+  @keyframes toastIn { from{opacity:0;transform:translateY(-14px);} to{opacity:1;transform:translateY(0);} }
+  @keyframes toastOut { to{opacity:0;transform:translateY(-14px);} }
+
+  /* LEVEL CHIP + PASSIVE ROW */
+  .question-num .lb-diff-chip { margin-left: 8px; font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
+  .icon-btn-row { flex-wrap: wrap; }
+  .icon-btn { flex: 1 1 calc(33% - 8px); }
+  .passive-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; min-height:0; }
+  .passive-chip { font-size:11px; padding:4px 10px; border-radius:99px; border:1px solid var(--border); color:var(--muted); background:rgba(255,255,255,0.02); }
+  .passive-chip.on { color:#f5c842; border-color:rgba(245,200,66,0.35); background:rgba(245,200,66,0.07); }
+  .shop-list { max-height: 420px; overflow-y: auto; }
+  .shop-kind { display:inline-block; font-family:'JetBrains Mono',monospace; font-size:10px; padding:1px 7px; border-radius:99px; margin-left:6px; border:1px solid var(--border); color:var(--muted); vertical-align:middle; }
+  .start-memory { color: var(--muted); font-size: 12px; margin-bottom: 10px; letter-spacing: .5px; }
+
+  /* GAME MEMORY */
+  .mem-title { font-family:'Bebas Neue',cursive; font-size:32px; letter-spacing:3px; color:var(--accent); margin-bottom:4px; text-align:center; }
+  .mem-who { text-align:center; color:var(--muted); font-size:13px; margin-bottom:16px; }
+  .mem-body { max-height: 480px; overflow-y: auto; padding-right: 4px; margin-bottom: 16px; }
+  .mem-grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-bottom:18px; }
+  .mem-pill { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:10px; padding:10px 6px; text-align:center; }
+  .mem-pill .num { font-family:'Bebas Neue',cursive; font-size:24px; color:var(--accent); letter-spacing:1px; }
+  .mem-pill .lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+  .mem-sec { font-family:'Bebas Neue',cursive; font-size:16px; letter-spacing:2px; color:var(--accent); margin:16px 0 8px; }
+  .mem-level { display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:12px; color:var(--muted); }
+  .mem-level .lb-diff-chip { min-width:64px; text-align:center; }
+  .mem-bar { flex:1; height:6px; background:var(--border); border-radius:99px; overflow:hidden; }
+  .mem-bar > div { height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2)); border-radius:99px; }
+  .mem-row { display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:10px; padding:9px 12px; margin-bottom:6px; font-size:13px; }
+  .mem-row .mr-main { flex:1; line-height:1.4; }
+  .mem-row .mr-side { font-size:11px; color:var(--muted); white-space:nowrap; font-family:'JetBrains Mono',monospace; }
+  .mem-empty { color:var(--muted); font-size:13px; padding:6px 2px; }
+  .mem-badges { display:flex; flex-wrap:wrap; gap:6px; font-size:20px; }
+  .practice-btn { width:100%; margin-top:8px; padding:12px; border-radius:10px; border:1.5px solid rgba(206,50,98,0.35); background:rgba(206,50,98,0.08); color:#ff8fae; cursor:pointer; font-family:'Bebas Neue',cursive; font-size:16px; letter-spacing:3px; }
+  .practice-btn:hover { border-color:var(--accent2); }
+</style>
+</head>
+<body>
+<div id="toastArea"></div>
+<div class="container">
+
+  <div id="progressArea" style="display:none;">
+    <div class="progress-label">
+      <span id="qLabel">Question 1 of 15</span>
+      <span id="scoreLabel">Score: 0</span>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar"></div></div>
+    <br>
+  </div>
+
+  <div class="card">
+
+    <!-- WELCOME -->
+    <div id="welcomeScreen" class="welcome-screen">
+      <span class="welcome-player"></span>
+      <div class="welcome-msg" id="welcomeMsg"></div>
+      <div class="welcome-title">Welcome to <span>The ultimate quiz in Go</span></div>
+      <p class="welcome-subtitle">The ultimate quiz in 01edu curriculum, for students. Test yourself on real project concepts in Go fundamentals, and senior-level patterns.</p>
+
+      <div class="welcome-features">
+        <div class="feature-card">
+          <span class="feature-icon">🎯</span>
+          <div class="feature-title"><span id="featQCount">250</span> Questions</div>
+          <div class="feature-desc">Handcrafted questions covering every 01edu Go project and normal go concepts, each tagged Easy, Medium or Hard</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">⏱</span>
+          <div class="feature-title">3 Difficulty Levels</div>
+          <div class="feature-desc">Easy (30s) 😁, Medium (25s) 🥶, Hard (15s) ☠️, per question</div>
+          <div class="feature-coins">Easy 2 coins, Medium 3 coins, Hard 5 coins</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🏆</span>
+          <div class="feature-title">Leaderboard</div>
+          <div class="feature-desc">Compete with others and save your high scores and win a price from chekus joseph if you perform well in the hard_mode ☠️ the price of any  amount of airtime according to your performance</div>
+          <div class="feature-levels">Daily Challenge: 10 questions, 1 attempt per day, streaks count</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔀</span>
+          <div class="feature-title">Always Fresh</div>
+          <div class="feature-desc">15 random questions each round 🤖</div>
+          <div class="feature-question">All 251 questions now carry their own level: 89 easy, 118 medium and 44 hard.</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🪙</span>
+          <div class="feature-title">Coins & Shop</div>
+          <div class="feature-desc">Earn coins for correct answers (harder questions pay more) and spend them on 9 power-ups 👻</div>
+        </div>
+        <div class="feature-card">
+          <span class="feature-icon">🔥</span>
+          <div class="feature-title">Daily Challenge</div>
+          <div class="feature-desc">A fresh 10-question challenge every day — build your streak 😎</div>
+        </div>
+      </div>
+
+      <div class="welcome-topics">
+        <div class="topics-title">📚 Topics Covered</div>
+        <div class="topics-grid">
+          <span class="topic-tag">ascii-art and ascii-web</span>
+          <span class="topic-tag">unicode and rune</span>
+          <span class="topic-tag">go-reloaded</span>
+          <span class="topic-tag">lem-in and forum</span>
+          <span class="topic-tag">groupie-tracker</span>
+          <span class="topic-tag">normal golang</span>
+          <span class="topic-tag">maps & slices</span>
+          <span class="topic-tag">blockchain</span>
+          <span class="topic-tag">strings MANIPULATION</span>
+          <span class="topic-tag">goroutines</span>
+          <span class="topic-tag">interfaces</span>
+          <span class="topic-tag">Error handling</span>
+          <span class="topic-tag">testing in vs code</span>
+          <span class="topic-tag">senior go</span>
+          <span class="topic-tag">packages and modules</span>
+        </div>
+      </div>
+
+      <div class="name-form">
+        <label>👤 Your name (for the leaderboard) if not you will be anonymous</label>
+        <input type="text" id="visitorName" placeholder="Enter your name..." maxlength="20"
+          onfocus="this.style.borderColor='#00acd7'" onblur="this.style.borderColor='#2a2a2a'"
+          oninput="togglePinField()"
+          onkeydown="if(event.key==='Enter'){ if(document.getElementById('pinFormWrap').style.display==='none'){ togglePinField(); document.getElementById('visitorPin').focus(); } else { enterApp(); } }" />
+      </div>
+      <div class="name-form" id="pinFormWrap" style="display:none;">
+        <label>🔒 4-digit PIN (keeps your coins yours — someone else with your name needs this too)</label>
+        <input type="password" id="visitorPin" placeholder="••••" maxlength="4" inputmode="numeric" pattern="[0-9]*"
+          onfocus="this.style.borderColor='#00acd7'" onblur="this.style.borderColor='#2a2a2a'"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+          onkeydown="if(event.key==='Enter') enterApp()" />
+        <p id="pinHint" style="margin-top:6px;color:#666;font-size:11px;"></p>
+      </div>
+      <button class="enter-btn" onclick="enterApp()">Let's Go 😈</button>
+      <p style="margin-top:14px;color:#444;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Built by Chekus Joseph</p>
+    </div>
+
+    <!-- START -->
+    <div id="startScreen" class="start-screen" style="display:none;">
+      <div class="top-actions-row">
+        <div class="coin-display">🪙 <span id="coinBalance">0</span></div>
+        <button class="icon-round" onclick="showAchievements()" title="Achievements">🏅</button>
+      </div>
+      <div class="lang-badge">01edu · Go Projects</div>
+      <p id="startWelcome" style="font-weight:700;font-size:16px;color:var(--text);margin-bottom:4px;"></p>
+      <p id="startMemoryLine" class="start-memory"></p>
+      <p>Pick a difficulty and test your Go knowledge!</p>
+      <div class="stats-row">
+        <div class="stat-pill"><div class="num" id="statQCount">250</div><div class="lbl">Questions</div></div>
+        <div class="stat-pill"><div class="num">15</div><div class="lbl">Per Round</div></div>
+        <div class="stat-pill"><div class="num">∞</div><div class="lbl">Replays</div></div>
+      </div>
+      <div class="diff-row">
+        <button class="diff-btn easy active" onclick="setDiff('easy', this)">
+          😁 Easy<span class="diff-label">30s / Q</span>
+        </button>
+        <button class="diff-btn medium" onclick="setDiff('medium', this)">
+          🥶 Medium<span class="diff-label">25s / Q</span>
+        </button>
+        <button class="diff-btn hard" onclick="setDiff('hard', this)">
+          ☠️ Hard<span class="diff-label">15s / Q</span>
+        </button>
+      </div>
+      <button class="start-btn" onclick="startQuiz()">Start Quiz</button>
+      <button class="lb-btn" onclick="showDailyChallenge()" style="border-color:rgba(206,50,98,0.3);color:var(--accent2);">🔥 Daily Challenge</button>
+      <button class="lb-btn" onclick="showShop()">🛒 Shop</button>
+      <button class="lb-btn" onclick="showMemory()">📓 Game Memory</button>
+      <button class="lb-btn" onclick="showLeaderboard()">🏆 Leaderboard</button>
+      <button onclick="stopTimer(); show('welcomeScreen')" style="margin-top:8px;width:100%;background:transparent;border:none;color:#444;font-size:12px;letter-spacing:2px;text-transform:uppercase;padding:8px;cursor:pointer;font-family:'DM Sans',sans-serif;" onmouseover="this.style.color='#00acd7'" onmouseout="this.style.color='#444'">← Back to Welcome</button>
+    </div>
+
+    <!-- QUIZ -->
+    <div id="quizScreen" style="display:none;">
+      <div class="quiz-top-bar">
+        <div class="coin-display">🪙 <span id="coinInQuiz">0</span></div>
+        <button class="quit-btn" onclick="requestQuit()">✕ Quit</button>
+      </div>
+      <div id="quitConfirmBox" class="quit-confirm" style="display:none;">
+        <p>Quit this quiz? Your progress in this round will be lost But earn coins are kept.</p>
+        <div class="quit-confirm-btns">
+          <button class="qc-yes" onclick="confirmQuit()">Yes, quit</button>
+          <button class="qc-no" onclick="cancelQuit()">Cancel</button>
+        </div>
+      </div>
+      <div class="timer-wrap">
+        <div class="timer-bar-bg"><div class="timer-bar" id="timerBar"></div></div>
+        <div class="timer-num" id="timerNum">30</div>
+      </div>
+      <div class="question-num" id="questionNum">Question 01</div>
+      <div class="question-text" id="questionText"></div>
+      <div id="codeBlock"></div>
+      <div class="options" id="optionsContainer"></div>
+      <div class="icon-btn-row">
+        <button class="icon-btn" id="hintBtn" onclick="useHint()">✂️ 50/50<span class="ic-count" id="hintCount">0</span></button>
+        <button class="icon-btn" id="freezeBtn" onclick="useFreeze()">🧊 +10s<span class="ic-count" id="freezeCount">0</span></button>
+        <button class="icon-btn" id="warpBtn" onclick="useWarp()">⏳ +20s<span class="ic-count" id="warpCount">0</span></button>
+        <button class="icon-btn" id="skipBtn" onclick="useSkip()">⏭ Skip<span class="ic-count" id="skipCount">0</span></button>
+        <button class="icon-btn" id="boosterBtn" onclick="useBooster()">💎 2× Coins<span class="ic-count" id="boosterCount">0</span></button>
+      </div>
+      <div class="passive-row" id="passiveRow"></div>
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
+    </div>
+
+    <!-- SCORE -->
+    <div id="scoreScreen" style="display:none;">
+      <div style="text-align:center;">
+        <div class="score-circle">
+          <div class="score-num" id="finalScore">0</div>
+          <div class="score-denom">/ <span id="finalTotal">15</span></div>
+        </div>
+        <div class="score-title" id="scoreTitle"></div>
+        <div class="score-msg" id="scoreMsg"></div>
+        <div style="margin-top:16px;font-size:14px;color:var(--accent);font-family:'Bebas Neue',cursive;letter-spacing:1px;">
+          🪙 <span id="coinsEarned">0</span> Coins Earned
+        </div>
+      </div>
+      <div id="practiceNote" style="display:none;margin-top:16px;text-align:center;color:var(--muted);font-size:13px;">Practice rounds are not saved to the leaderboard.</div>
+      <div id="saveScoreBox" style="margin-top:20px;">
+        <p style="color:var(--muted);font-size:13px;margin-bottom:10px;text-align:center;">Save your score to the leaderboard:</p>
+        <input type="text" id="playerName" placeholder="Enter your name..." maxlength="20" style="width:100%;padding:12px 16px;background:#0d0d0d;border:1.5px solid #2a2a2a;border-radius:10px;color:#f0f0f0;font-family:'DM Sans',sans-serif;font-size:15px;outline:none;margin-bottom:12px;display:block;box-sizing:border-box;" onfocus="this.style.borderColor='#00acd7'" onblur="this.style.borderColor='#2a2a2a'" />
+        <div id="savedMsg" style="display:none;color:#3ddc84;font-size:13px;text-align:center;margin-bottom:8px;">✓ Score saved to leaderboard!</div>
+        <button onclick="saveScore()" style="width:100%;padding:13px;background:linear-gradient(135deg,#00acd7,#ce3262);border:none;border-radius:10px;color:#000;cursor:pointer;font-family:'Bebas Neue',cursive;font-size:18px;letter-spacing:3px;margin-bottom:10px;display:block;">Save Score</button>
+      </div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px;">
+        <button onclick="startQuiz()" style="padding:14px 28px;background:#00acd7;border:none;border-radius:12px;color:#000;cursor:pointer;font-family:'Bebas Neue',cursive;font-size:17px;letter-spacing:3px;">Play Again</button>
+        <button onclick="showMemory()" style="padding:14px 28px;background:transparent;border:1.5px solid #2a2a2a;border-radius:12px;color:#666;cursor:pointer;font-family:'Bebas Neue',cursive;font-size:17px;letter-spacing:3px;">📓 Memory</button>
+        <button onclick="showLeaderboard()" style="padding:14px 28px;background:transparent;border:1.5px solid #2a2a2a;border-radius:12px;color:#666;cursor:pointer;font-family:'Bebas Neue',cursive;font-size:17px;letter-spacing:3px;">🏆 Scores</button>
+      </div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div id="lbScreen" style="display:none;">
+      <div class="lb-title">🏆 Leaderboard</div>
+      <div class="lb-tabs">
+        <button class="lb-tab all active" data-diff="all"    onclick="setLbFilter('all', this)">All</button>
+        <button class="lb-tab easy"       data-diff="easy"   onclick="setLbFilter('easy', this)">😁 Easy</button>
+        <button class="lb-tab medium"     data-diff="medium" onclick="setLbFilter('medium', this)">🥶 Medium</button>
+        <button class="lb-tab hard"       data-diff="hard"   onclick="setLbFilter('hard', this)">☠️ Hard</button>
+        <button class="lb-tab daily"      data-diff="daily"  onclick="setLbFilter('daily', this)">🔥 Daily</button>
+      </div>
+      <ul class="lb-list" id="lbList"></ul>
+      <button class="lb-back" onclick="show('startScreen')">← Back</button>
+    </div>
+
+    <!-- SHOP -->
+    <div id="shopScreen" style="display:none;">
+      <div class="shop-title">🛒 Power-Up Shop</div>
+      <div class="shop-sub">Spend coins earned from correct answers wisely</div>
+      <div style="text-align:center;margin-bottom:16px;"><div class="coin-display" style="display:inline-flex;">🪙 <span id="coinInShop">0</span></div></div>
+      <div class="shop-list" id="shopList"></div>
+      <button class="lb-back" onclick="show('startScreen')">← Back</button>
+    </div>
+
+    <!-- GAME MEMORY -->
+    <div id="memScreen" style="display:none;">
+      <div class="mem-title">📓 Game Memory</div>
+      <div class="mem-who" id="memWho"></div>
+      <div class="mem-body" id="memBody"></div>
+      <button class="lb-back" onclick="show('startScreen')">← Back</button>
+    </div>
+
+    <!-- ACHIEVEMENTS -->
+    <div id="achScreen" style="display:none;">
+      <div class="ach-title">🏅 Achievements</div>
+      <div class="ach-progress" id="achProgress">0 / 0 unlocked</div>
+      <div class="ach-list" id="achList"></div>
+      <button class="lb-back" onclick="show('startScreen')">← Back</button>
+    </div>
+
+    <!-- DAILY CHALLENGE -->
+    <div id="dailyScreen" style="display:none;">
+      <div class="daily-title">🔥 Daily Challenge</div>
+      <div class="daily-card">
+        <div class="daily-streak" id="dailyStreakNum">0</div>
+        <div class="daily-streak-label">Day Streak</div>
+        <p style="color:var(--muted);font-size:13px;margin-top:12px;">10 fixed questions (4 easy, 3 medium, 3 hard), the same for everyone today. Complete it once per day to build your streak and earn bonus coins.</p>
+        <div id="dailyDoneBadge" style="display:none;" class="daily-done-badge">✓ Completed today — come back tomorrow!</div>
+      </div>
+      <button class="start-btn" id="dailyStartBtn" onclick="startDailyChallenge()">Start Daily Challenge</button>
+      <button class="lb-btn" onclick="show('startScreen')" style="margin-top:12px;">← Back</button>
+    </div>
+  </div>
+</div>
+<script src="questions.js"></script>
+<script>
+// ── QUESTION LEVELS ────────────────────────────────────────────
+// Every question carries its own level ("easy" | "medium" | "hard").
+// The level decides the timer, the coins earned and which round pool
+// the question belongs to.
+const LEVELS = ['easy', 'medium', 'hard'];
+const LEVEL_META = {
+  easy:   { label: 'Easy',   time: 30, coins: 2 },
+  medium: { label: 'Medium', time: 25, coins: 3 },
+  hard:   { label: 'Hard',   time: 15, coins: 5 }
+};
+function levelOf(q) {
+  return q && LEVEL_META[q.level] ? q.level : 'medium';
+}
+
+// Stable id per question so the memory can remember which ones were missed.
+function hashStr(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+ALL_QUESTIONS.forEach(q => {
+  q.id = 'q' + hashStr(q.q + '|' + (q.code || '') + '|' + q.options.join('|'));
+});
+
+const QUESTIONS_PER_ROUND = 15;
+const DAILY_QUESTION_COUNT = 10;
+const MAX_LOG = 80;      // activity entries kept per player
+const MAX_ROUNDS = 30;   // round summaries kept per player
+
+let questions = [], current = 0, score = 0, answered = false, streak = 0;
+let difficulty = 'easy';
+let timerSeconds = 30, timerTotal = 30, timerInterval = null;
+let visitorName = '';
+let welcomeBase = '';
+let isDailyMode = false;
+let isPracticeMode = false;
+let lastRoundDiff = 'easy';   // 'easy' | 'medium' | 'hard' | 'daily' | 'practice'
+let lbFilter = 'all';         // which leaderboard tab is selected
+let lbCache = [];             // last leaderboard payload from the server
+let coinsEarnedThisRound = 0; // track coins earned during this quiz
+let boosterActive = false;    // 2x coins for the rest of the round
+let roundPowerUps = 0;        // power-ups used this round (for "Pure Skill")
+let hintUsedThisQuestion = false;
+let retryUsedThisQuestion = false;
+let questionStartedAt = 0;
+const letters = ['A','B','C','D'];
+
+const GREETINGS = [
+  "Ready to level up? 🚀",
+  "Let's see what you know! 💡",
+  "Time to prove your Go skills! 💪",
+  "A new challenger approaches! ⚔️",
+  "Gopher mode: activated 🐹",
+  "Hey there, think fast like a coder! ⚡",
+  "May the best Gopher win! 🏆"
+];
+
+// ── SHOP ITEMS ───────────────────────────────────────────────
+// kind: 'use'       -> you press a button during a question
+//       'auto'      -> triggers by itself when it is needed
+//       'permanent' -> buy once, works forever
+const SHOP_ITEMS = [
+  { id: 'hint50',  icon: '✂️', name: '50/50 Hint',    kind: 'use',       price: 50,  desc: 'Removes two incorrect options from the current question' },
+  { id: 'freeze',  icon: '🧊', name: 'Time Freeze',   kind: 'use',       price: 50,  desc: 'Adds 10 extra seconds to the timer' },
+  { id: 'warp',    icon: '⏳', name: 'Time Warp',     kind: 'use',       price: 90,  desc: 'Adds 20 extra seconds to the timer' },
+  { id: 'skip',    icon: '⏭',  name: 'Skip Token',    kind: 'use',       price: 50,  desc: 'Skip a question with no penalty to your streak' },
+  { id: 'booster', icon: '💎', name: 'Coin Booster',  kind: 'use',       price: 100, desc: 'Doubles the coins from correct answers for the rest of the round' },
+  { id: 'shield',  icon: '🛡️', name: 'Streak Shield', kind: 'auto',      price: 80,  desc: 'Automatically protects your streak from one wrong answer or timeout' },
+  { id: 'retry',   icon: '🔁', name: 'Second Chance', kind: 'auto',      price: 120, desc: 'Automatically lets you try again once after a wrong answer' },
+  { id: 'charm',   icon: '🍀', name: 'Lucky Charm',   kind: 'permanent', price: 300, desc: 'Permanent: +1 bonus coin on every correct answer' },
+  { id: 'crown',   icon: '👑', name: 'Golden Crown',  kind: 'permanent', price: 150, desc: 'Permanent: a crown next to your name on the home screen' }
+];
+const KIND_LABEL = { use: 'use in quiz', auto: 'automatic', permanent: 'permanent' };
+
+// ── ACHIEVEMENTS ─────────────────────────────────────────────
+const ACHIEVEMENTS = [
+  // playing
+  { id: 'first_quiz',     icon: '🎓', name: 'First Steps',           desc: 'Complete your first quiz',                                check: s => s.stats.gamesPlayed >= 1 },
+  { id: 'marathon',       icon: '🏃', name: 'Marathoner',            desc: 'Play 10 quizzes',                                         check: s => s.stats.gamesPlayed >= 10 },
+  { id: 'games25',        icon: '🥾', name: 'Regular',               desc: 'Play 25 quizzes',                                         check: s => s.stats.gamesPlayed >= 25 },
+  { id: 'games50',        icon: '🏔️', name: 'Ultra Marathoner',      desc: 'Play 50 quizzes',                                         check: s => s.stats.gamesPlayed >= 50 },
+  // knowledge
+  { id: 'correct50',      icon: '🎯', name: 'Sharpshooter',          desc: 'Answer 50 questions correctly (lifetime)',                check: s => s.stats.correctTotal >= 50 },
+  { id: 'century',        icon: '📚', name: 'Century Club',          desc: 'Answer 100 questions correctly (lifetime)',               check: s => s.stats.correctTotal >= 100 },
+  { id: 'correct250',     icon: '🧠', name: 'Go Scholar',            desc: 'Answer 250 questions correctly (lifetime)',               check: s => s.stats.correctTotal >= 250 },
+  { id: 'correct500',     icon: '🧙', name: 'Go Sage',               desc: 'Answer 500 questions correctly (lifetime)',               check: s => s.stats.correctTotal >= 500 },
+  { id: 'accuracy90',     icon: '🎖️', name: 'Sharp Mind',            desc: 'Keep 90% accuracy over at least 50 answers',              check: s => s.stats.questionsTotal >= 50 && s.stats.correctTotal / s.stats.questionsTotal >= 0.9 },
+  { id: 'comeback',       icon: '🩹', name: 'Learning From Mistakes', desc: 'Clear 10 questions you previously got wrong',            check: s => s.stats.clearedTotal >= 10 },
+  // rounds and levels
+  { id: 'perfect',        icon: '💯', name: 'Perfect Round',         desc: 'Score 100% in a round',                                   check: s => s.stats.perfectRounds >= 1 },
+  { id: 'pure_round',     icon: '🧘', name: 'Pure Skill',            desc: 'Score 100% in a round without using any power-ups',       check: s => s.stats.pureRounds >= 1 },
+  { id: 'hard_mode',      icon: '🔴', name: 'No Fear',               desc: 'Complete a quiz on Hard difficulty',                      check: s => s.stats.hardCompleted >= 1 },
+  { id: 'hard_perfect',   icon: '☠️', name: 'Nightmare Slayer',      desc: 'Score 100% on a Hard round',                              check: s => s.stats.hardPerfect >= 1 },
+  { id: 'all_levels',     icon: '🌈', name: 'Well Rounded',          desc: 'Complete a round on Easy, Medium and Hard',               check: s => LEVELS.every(l => s.stats.levelsPlayed && s.stats.levelsPlayed[l]) },
+  // streaks and speed
+  { id: 'streak10',       icon: '🔥', name: 'On Fire',               desc: 'Get 10 correct answers in a row',                         check: s => s.stats.bestStreak >= 10 },
+  { id: 'streak15',       icon: '⚡', name: 'Unstoppable',           desc: 'Get 15 correct answers in a row',                         check: s => s.stats.bestStreak >= 15 },
+  { id: 'lightning',      icon: '⏱️', name: 'Lightning Reflexes',    desc: 'Answer 5 questions correctly in under 3 seconds each',    check: s => s.stats.fastAnswers >= 5 },
+  // coins and shop
+  { id: 'piggy',          icon: '🐷', name: 'Piggy Bank',            desc: 'Hold 500 coins at once',                                  check: s => s.coins >= 500 },
+  { id: 'coin_collector', icon: '💰', name: 'Coin Collector',        desc: 'Earn 1000 coins in total',                                check: s => s.stats.lifetimeCoins >= 1000 },
+  { id: 'tycoon',         icon: '🏦', name: 'Tycoon',                desc: 'Earn 5000 coins in total',                                check: s => s.stats.lifetimeCoins >= 5000 },
+  { id: 'shopper',        icon: '🛍️', name: 'First Purchase',        desc: 'Buy something from the shop',                             check: s => s.stats.itemsBought >= 1 },
+  { id: 'spender',        icon: '💸', name: 'Big Spender',           desc: 'Buy 10 items from the shop',                              check: s => s.stats.itemsBought >= 10 },
+  { id: 'collector',      icon: '🧺', name: 'Collector',             desc: 'Buy every kind of item in the shop at least once',        check: s => SHOP_ITEMS.every(i => (s.stats.purchases[i.id] || 0) >= 1) },
+  { id: 'royalty',        icon: '👑', name: 'Royalty',               desc: 'Buy the Golden Crown',                                    check: s => (s.stats.purchases.crown || 0) >= 1 },
+  // daily
+  { id: 'daily3',         icon: '📆', name: 'Getting Started',       desc: 'Reach a 3-day Daily Challenge streak',                    check: s => s.stats.dailyStreak >= 3 },
+  { id: 'daily7',         icon: '🗓️', name: 'Dedicated Gopher',      desc: 'Reach a 7-day Daily Challenge streak',                    check: s => s.stats.dailyStreak >= 7 },
+  { id: 'daily10',        icon: '📅', name: 'Habit Former',          desc: 'Reach a 10-day Daily Challenge streak',                   check: s => s.stats.dailyStreak >= 10 },
+  { id: 'daily30',        icon: '🗻', name: 'Iron Habit',            desc: 'Reach a 30-day Daily Challenge streak',                   check: s => s.stats.dailyStreak >= 30 }
+];
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+const SCREENS = ['welcomeScreen','startScreen','quizScreen','scoreScreen','lbScreen','shopScreen','achScreen','dailyScreen','memScreen'];
+function show(id) {
+  SCREENS.forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.style.display = s === id ? 'block' : 'none';
+  });
+  document.getElementById('progressArea').style.display =
+    (id === 'quizScreen' || id === 'scoreScreen') ? 'block' : 'none';
+  if (id === 'startScreen') refreshStartSummary();
+}
+
+// ── STORAGE FALLBACK ─────────────────────────────────────────
+// Inside Claude artifacts, window.storage is provided by the host.
+// On your own Go server it doesn't exist, so we fall back to
+// localStorage. NOTE: with the fallback, "shared" data is only shared
+// within this one browser, not across devices.
+if (typeof window.storage === 'undefined') {
+  const prefix = (shared) => (shared ? 'shared:' : 'personal:');
+  window.storage = {
+    async get(key, shared) {
+      const v = localStorage.getItem(prefix(shared) + key);
+      if (v === null) throw new Error('Key not found: ' + key);
+      return { key, value: v, shared: !!shared };
+    },
+    async set(key, value, shared) {
+      localStorage.setItem(prefix(shared) + key, value);
+      return { key, value, shared: !!shared };
+    },
+    async delete(key, shared) {
+      localStorage.removeItem(prefix(shared) + key);
+      return { key, deleted: true, shared: !!shared };
+    },
+    async list(pfx, shared) {
+      const p = prefix(shared) + (pfx || '');
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(p)) keys.push(k.slice(prefix(shared).length));
+      }
+      return { keys, prefix: pfx, shared: !!shared };
+    }
+  };
+}
+
+// ── PLAYER IDENTITY & PERSISTENT PROGRESS ────────────────────
+// Progress (coins, achievements, inventory, stats, game memory) is keyed
+// by the name a player types in on the welcome screen, using SHARED
+// storage. A 4-digit PIN goes alongside the name so two different people
+// typing the same name don't collide. It's kept in a shared "registry"
+// record (name-slug -> pin). This is a lightweight collision guard, not
+// real account security: the PIN is stored in plain text and there is no
+// way to recover a forgotten one other than picking a new name.
+const ANON_KEY = 'quiz-progress-anon';
+const REGISTRY_KEY = 'name-registry';
+let currentStorageKey = ANON_KEY;
+let currentStorageShared = false;
+
+function slugify(name) {
+  const slug = name.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '');
+  return slug || 'anon';
+}
+
+function playerKey(slug) {
+  return 'player:' + slug;
+}
+
+async function loadRegistry() {
+  try {
+    const res = await window.storage.get(REGISTRY_KEY, true);
+    if (res && res.value) return JSON.parse(res.value);
+  } catch (e) {
+    // no registry saved yet
+  }
+  return {};
+}
+
+async function registerNamePin(slug, pin) {
+  const reg = await loadRegistry();
+  reg[slug] = pin;
+  try { await window.storage.set(REGISTRY_KEY, JSON.stringify(reg), true); }
+  catch (e) { console.error('Could not save name registry', e); }
+}
+
+function togglePinField() {
+  const name = document.getElementById('visitorName').value.trim();
+  const wrap = document.getElementById('pinFormWrap');
+  const hint = document.getElementById('pinHint');
+  if (name) {
+    wrap.style.display = 'block';
+    hint.textContent = "New name? Pick any 4 digits — you'll need the same ones next time to get this exact save back.";
+    hint.style.color = '#666';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function emptyCounts() {
+  const o = {};
+  SHOP_ITEMS.forEach(i => { o[i.id] = 0; });
+  return o;
+}
+
+function defaultMemory() {
+  return {
+    byLevel: {
+      easy:   { correct: 0, failed: 0 },
+      medium: { correct: 0, failed: 0 },
+      hard:   { correct: 0, failed: 0 }
+    },
+    missed: {},   // questionId -> { q, level, misses, cleared, lastMissed }
+    rounds: [],   // newest first: { t, mode, score, total, coins, practice }
+    log: []       // newest first: { t, type, text }
+  };
+}
+
+function defaultState() {
+  return {
+    coins: 0,
+    achievements: [],
+    inventory: emptyCounts(),
+    stats: {
+      gamesPlayed: 0, correctTotal: 0, failedTotal: 0, timeoutTotal: 0, skippedTotal: 0,
+      clearedTotal: 0, questionsTotal: 0, bestScore: 0, bestStreak: 0,
+      perfectRounds: 0, hardPerfect: 0, pureRounds: 0, fastAnswers: 0,
+      dailyStreak: 0, lastDailyDate: null,
+      itemsBought: 0, hardCompleted: 0, lifetimeCoins: 0,
+      levelsPlayed: { easy: false, medium: false, hard: false },
+      purchases: emptyCounts()   // total bought per shop item
+    },
+    memory: defaultMemory()
+  };
+}
+
+let state = defaultState();
+
+async function enterApp() {
+  const nameInput = document.getElementById('visitorName');
+  const pinWrap = document.getElementById('pinFormWrap');
+  const pinInput = document.getElementById('visitorPin');
+  const pinHint = document.getElementById('pinHint');
+  const name = nameInput.value.trim();
+
+  if (!name) {
+    visitorName = '';
+    await loadPlayer('', null);
+    return;
+  }
+
+  // Name entered but the PIN field isn't showing yet — reveal it and stop here.
+  if (pinWrap.style.display === 'none') {
+    togglePinField();
+    pinInput.focus();
+    return;
+  }
+
+  const pin = pinInput.value.trim();
+  if (!/^\d{4}$/.test(pin)) {
+    pinHint.textContent = '⚠️ Enter exactly 4 digits.';
+    pinHint.style.color = '#ff8f8f';
+    pinInput.focus();
+    return;
+  }
+
+  const slug = slugify(name);
+  const registry = await loadRegistry();
+  if (registry[slug]) {
+    if (registry[slug] !== pin) {
+      pinHint.textContent = '⚠️ Wrong PIN for that name. Try again, or use a different name.';
+      pinHint.style.color = '#ff8f8f';
+      pinInput.value = '';
+      pinInput.focus();
+      return;
+    }
+  } else {
+    await registerNamePin(slug, pin);
+  }
+
+  visitorName = name;
+  await loadPlayer(name, slug);
+}
+
+async function loadPlayer(name, slug) {
+  const isNamed = !!name;
+  currentStorageKey = isNamed ? playerKey(slug) : ANON_KEY;
+  currentStorageShared = isNamed; // named players are stored in shared space so any device can find them by name+PIN
+
+  let loaded = null;
+  try {
+    const res = await window.storage.get(currentStorageKey, currentStorageShared);
+    if (res && res.value) loaded = JSON.parse(res.value);
+  } catch (e) {
+    // no saved progress under this key yet
+  }
+
+  const isReturning = !!loaded;
+  state = defaultState();
+  if (loaded) {
+    // coins, achievements and items bought
+    state.coins = typeof loaded.coins === 'number' ? loaded.coins : 0;
+    state.achievements = (Array.isArray(loaded.achievements) ? loaded.achievements : [])
+      .filter(id => ACHIEVEMENTS.some(a => a.id === id));
+    state.inventory = Object.assign(emptyCounts(), loaded.inventory || {});
+
+    // stats (correct answers, failed answers, streaks ...)
+    const ls = loaded.stats || {};
+    state.stats = Object.assign(state.stats, ls);
+    state.stats.purchases = Object.assign(emptyCounts(), ls.purchases || {});
+    state.stats.levelsPlayed = Object.assign({ easy: false, medium: false, hard: false }, ls.levelsPlayed || {});
+    // Saves from before failed answers were tracked: everything that wasn't correct counts as failed
+    if (ls.failedTotal === undefined) {
+      state.stats.failedTotal = Math.max(0, (ls.questionsTotal || 0) - (ls.correctTotal || 0));
+    }
+
+    // game memory (missed questions, round history, activity log)
+    const lm = loaded.memory || {};
+    const dm = defaultMemory();
+    LEVELS.forEach(l => { dm.byLevel[l] = Object.assign(dm.byLevel[l], (lm.byLevel || {})[l] || {}); });
+    state.memory = {
+      byLevel: dm.byLevel,
+      missed: lm.missed && typeof lm.missed === 'object' ? lm.missed : {},
+      rounds: Array.isArray(lm.rounds) ? lm.rounds : [],
+      log: Array.isArray(lm.log) ? lm.log : []
+    };
+  }
+
+  const greeting = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+  if (isNamed && isReturning) {
+    welcomeBase = `Welcome back, ${name}! 🪙 ${state.coins} coins waiting for you.`;
+  } else if (isNamed) {
+    welcomeBase = `Hey ${name}! ${greeting}`;
+  } else {
+    welcomeBase = greeting;
+  }
+
+  logActivity('session', isReturning ? 'Came back and resumed from saved progress' : 'Started playing');
+  show('startScreen');
+  refreshCoinDisplays();
+  if (isNamed && isReturning) {
+    const s = state.stats;
+    showToast('👋', 'Welcome back!', `${name} — ${state.coins} coins, ${s.correctTotal || 0} correct, ${s.failedTotal || 0} failed`);
+  }
+  saveState();
+}
+
+async function saveState() {
+  try { await window.storage.set(currentStorageKey, JSON.stringify(state), currentStorageShared); }
+  catch (e) { console.error('Could not save progress', e); }
+  queuePlayerSave();   // also push the player summary to the server
+}
+
+// ── PLAYER SUMMARY (sent to the Go server) ─────────────────────
+function buildPlayerSnapshot() {
+  const s = state.stats, m = state.memory;
+  return {
+    name: visitorName,
+    coins: state.coins,
+    lifetimeCoins: s.lifetimeCoins || 0,
+    achievements: ACHIEVEMENTS
+      .filter(a => state.achievements.includes(a.id))
+      .map(a => ({ id: a.id, name: a.name })),
+    purchases: Object.assign({}, s.purchases || {}),   // total bought, per item
+    inventory: Object.assign({}, state.inventory),     // currently owned
+    stats: {
+      correct: s.correctTotal || 0,
+      failed: s.failedTotal || 0,
+      timedOut: s.timeoutTotal || 0,
+      skipped: s.skippedTotal || 0,
+      cleared: s.clearedTotal || 0,
+      questionsAnswered: s.questionsTotal || 0,
+      gamesPlayed: s.gamesPlayed || 0,
+      bestScore: s.bestScore || 0,
+      bestStreak: s.bestStreak || 0,
+      dailyStreak: s.dailyStreak || 0
+    },
+    byLevel: m.byLevel,
+    missedQuestions: Object.values(m.missed)
+      .filter(x => !x.cleared)
+      .map(x => ({ q: x.q, level: x.level, misses: x.misses })),
+    recentActivity: m.log.slice(0, 20),
+    savedAt: new Date().toISOString()
+  };
+}
+
+async function savePlayerProgress() {
+  if (!visitorName) return false;            // anonymous players aren't saved
+  const snapshot = buildPlayerSnapshot();
+
+  // 1) local backup (works even if the server is down)
+  try {
+    localStorage.setItem('gopher-quiz:' + slugify(snapshot.name), JSON.stringify(snapshot));
+  } catch (e) { /* storage unavailable, ignore */ }
+
+  // 2) server copy (needs a POST /api/player route on the Go server)
+  try {
+    const res = await fetch('/api/player', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(snapshot)
+    });
+    if (!res.ok) throw new Error('Server error ' + res.status);
+    return true;
+  } catch (e) {
+    console.warn('Could not save player progress to server:', e);
+    return false;
+  }
+}
+
+// Debounced, so rapid coin/answer updates don't spam the server
+let playerSaveTimer = null;
+function queuePlayerSave() {
+  clearTimeout(playerSaveTimer);
+  playerSaveTimer = setTimeout(savePlayerProgress, 800);
+}
+
+// ── GAME MEMORY: recording what the player does ───────────────
+function clip(s, n) {
+  s = String(s);
+  return s.length > n ? s.slice(0, n - 1) + '…' : s;
+}
+
+function logActivity(type, text) {
+  const log = state.memory.log;
+  log.unshift({ t: Date.now(), type, text });
+  if (log.length > MAX_LOG) log.length = MAX_LOG;
+}
+
+// result: 'correct' | 'wrong' | 'timeout' | 'skip'
+function recordAnswer(q, result) {
+  const level = levelOf(q);
+  const mem = state.memory;
+  const lv = mem.byLevel[level];
+  const tag = `[${LEVEL_META[level].label}] ${clip(q.q, 70)}`;
+  state.stats.questionsTotal = (state.stats.questionsTotal || 0) + 1;
+
+  if (result === 'correct') {
+    state.stats.correctTotal = (state.stats.correctTotal || 0) + 1;
+    lv.correct++;
+    const m = mem.missed[q.id];
+    if (m && !m.cleared) {
+      m.cleared = true;
+      state.stats.clearedTotal = (state.stats.clearedTotal || 0) + 1;
+      logActivity('clear', 'Cleared a missed question: ' + tag);
+    } else {
+      logActivity('correct', 'Correct: ' + tag);
+    }
+  } else if (result === 'wrong' || result === 'timeout') {
+    state.stats.failedTotal = (state.stats.failedTotal || 0) + 1;
+    if (result === 'timeout') state.stats.timeoutTotal = (state.stats.timeoutTotal || 0) + 1;
+    lv.failed++;
+    const m = mem.missed[q.id] || (mem.missed[q.id] = { q: q.q, level, misses: 0, cleared: false, lastMissed: 0 });
+    m.misses++;
+    m.cleared = false;
+    m.lastMissed = Date.now();
+    logActivity(result === 'timeout' ? 'timeout' : 'wrong', (result === 'timeout' ? 'Ran out of time: ' : 'Wrong: ') + tag);
+  } else if (result === 'skip') {
+    state.stats.skippedTotal = (state.stats.skippedTotal || 0) + 1;
+    logActivity('skip', 'Skipped: ' + tag);
+  }
+}
+
+// ── COINS, TOASTS ──────────────────────────────────────────────
+function refreshCoinDisplays() {
+  ['coinBalance', 'coinInQuiz', 'coinInShop'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = state.coins;
+  });
+}
+
+function refreshStartSummary() {
+  const s = state.stats;
+  const crown = (state.inventory.crown || 0) > 0 ? ' 👑' : '';
+  const w = document.getElementById('startWelcome');
+  if (w) w.textContent = welcomeBase + crown;
+  const line = document.getElementById('startMemoryLine');
+  if (line) {
+    line.textContent = `✅ ${s.correctTotal || 0} correct · ❌ ${s.failedTotal || 0} failed · ` +
+      `🛍️ ${s.itemsBought || 0} items bought · 🏅 ${state.achievements.length}/${ACHIEVEMENTS.length}`;
+  }
+  refreshCoinDisplays();
+}
+
+function addCoins(n) {
+  state.coins += n;
+  coinsEarnedThisRound += n;
+  state.stats.lifetimeCoins = (state.stats.lifetimeCoins || 0) + n;
+  refreshCoinDisplays();
+  showToast('🪙', `+${n} Coins`, `Total this round: ${coinsEarnedThisRound}`);
+  saveState();
+}
+
+function spendCoins(n) {
+  if (state.coins < n) return false;
+  state.coins -= n;
+  refreshCoinDisplays();
+  saveState();
+  return true;
+}
+
+function showToast(icon, title, desc) {
+  const area = document.getElementById('toastArea');
+  if (!area) return;
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.innerHTML = `<span class="t-icon">${icon}</span><div><div class="t-title">${escapeHtml(title)}</div><div class="t-desc">${escapeHtml(desc)}</div></div>`;
+  area.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+// ── ACHIEVEMENTS ─────────────────────────────────────────────
+function checkAchievements() {
+  let changed = false;
+  ACHIEVEMENTS.forEach(a => {
+    if (!state.achievements.includes(a.id) && a.check(state)) {
+      state.achievements.push(a.id);
+      showToast(a.icon, 'Achievement Unlocked!', a.name);
+      logActivity('achievement', `Unlocked ${a.icon} ${a.name}`);
+      changed = true;
+    }
+  });
+  if (changed) saveState();
+}
+
+function showAchievements() {
+  show('achScreen');
+  const list = document.getElementById('achList');
+  document.getElementById('achProgress').textContent = `${state.achievements.length} / ${ACHIEVEMENTS.length} unlocked`;
+  list.innerHTML = ACHIEVEMENTS.map(a => {
+    const unlocked = state.achievements.includes(a.id);
+    return `
+      <div class="ach-item ${unlocked ? 'unlocked' : 'locked'}">
+        <div class="ai-icon">${unlocked ? a.icon : '🔒'}</div>
+        <div class="ai-info">
+          <div class="ai-name">${escapeHtml(a.name)}</div>
+          <div class="ai-desc">${escapeHtml(a.desc)}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── SHOP ─────────────────────────────────────────────────────
+function showShop() {
+  show('shopScreen');
+  refreshCoinDisplays();
+  renderShop();
+}
+
+function renderShop() {
+  const list = document.getElementById('shopList');
+  list.innerHTML = SHOP_ITEMS.map(it => {
+    const owned = state.inventory[it.id] || 0;
+    const maxed = it.kind === 'permanent' && owned >= 1;
+    const disabled = maxed || state.coins < it.price;
+    return `
+    <div class="shop-item">
+      <div class="si-icon">${it.icon}</div>
+      <div class="si-info">
+        <div class="si-name">${escapeHtml(it.name)}<span class="shop-kind">${KIND_LABEL[it.kind]}</span></div>
+        <div class="si-desc">${escapeHtml(it.desc)}</div>
+        <div class="si-owned">${maxed ? 'Owned ✓' : 'Owned: ' + owned}</div>
+      </div>
+      <button class="buy-btn" ${disabled ? 'disabled' : ''} onclick="buyItem('${it.id}')">${maxed ? '✓' : '🪙 ' + it.price}</button>
+    </div>`;
+  }).join('');
+}
+
+function buyItem(id) {
+  const item = SHOP_ITEMS.find(i => i.id === id);
+  if (!item) return;
+  if (item.kind === 'permanent' && (state.inventory[id] || 0) >= 1) return;
+  if (!spendCoins(item.price)) return;
+  state.inventory[id] = (state.inventory[id] || 0) + 1;
+  state.stats.itemsBought = (state.stats.itemsBought || 0) + 1;
+  state.stats.purchases = state.stats.purchases || {};
+  state.stats.purchases[id] = (state.stats.purchases[id] || 0) + 1;
+  logActivity('buy', `Bought ${item.icon} ${item.name} for ${item.price} coins`);
+  showToast(item.icon, 'Purchased!', item.name);
+  saveState();
+  checkAchievements();
+  renderShop();
+}
+
+// ── DAILY CHALLENGE ──────────────────────────────────────────
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function isYesterdayStr(dateStr) {
+  if (!dateStr) return false;
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return dateStr === `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+function dateSeed(dateStr) {
+  let h = 0;
+  for (let i = 0; i < dateStr.length; i++) { h = (h * 31 + dateStr.charCodeAt(i)) | 0; }
+  return Math.abs(h) || 1;
+}
+
+function seededRandom(seed) {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  return function () {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function seededShuffle(arr, seed) {
+  const rand = seededRandom(seed);
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function showDailyChallenge() {
+  show('dailyScreen');
+  document.getElementById('dailyStreakNum').textContent = state.stats.dailyStreak || 0;
+  const done = state.stats.lastDailyDate === todayStr();
+  document.getElementById('dailyDoneBadge').style.display = done ? 'inline-block' : 'none';
+  document.getElementById('dailyStartBtn').style.display = done ? 'none' : 'block';
+}
+
+// ── STARTING A ROUND ─────────────────────────────────────────
+function resetRound() {
+  current = 0; score = 0; answered = false; streak = 0;
+  boosterActive = false; roundPowerUps = 0;
+  coinsEarnedThisRound = 0;
+  document.getElementById('progressBar').style.width = '0%';
+  document.getElementById('savedMsg').style.display = 'none';
+  const nameBox = document.getElementById('playerName');
+  nameBox.value = '';
+  nameBox.disabled = false;
+  document.getElementById('quitConfirmBox').style.display = 'none';
+}
+
+function setDiff(d, btn) {
+  difficulty = d;
+  document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Normal round: only questions of the chosen level.
+function startQuiz() {
+  isDailyMode = false;
+  isPracticeMode = false;
+  lastRoundDiff = difficulty;
+  const pool = ALL_QUESTIONS.filter(q => levelOf(q) === difficulty);
+  questions = shuffle(pool).slice(0, QUESTIONS_PER_ROUND);
+  resetRound();
+  show('quizScreen');
+  loadQuestion();
+}
+
+// Daily: same 10 questions for everyone today — 4 easy, then 3 medium, then 3 hard.
+function startDailyChallenge() {
+  isDailyMode = true;
+  isPracticeMode = false;
+  lastRoundDiff = 'daily';
+  const shuffled = seededShuffle(ALL_QUESTIONS, dateSeed(todayStr()));
+  const pick = (lvl, n) => shuffled.filter(q => levelOf(q) === lvl).slice(0, n);
+  questions = [...pick('easy', 4), ...pick('medium', 3), ...pick('hard', 3)];
+  resetRound();
+  show('quizScreen');
+  loadQuestion();
+}
+
+// Practice: replay the questions this player has missed and not yet cleared.
+function startPractice() {
+  const seen = new Set();
+  const pool = ALL_QUESTIONS.filter(q => {
+    const m = state.memory.missed[q.id];
+    if (!m || m.cleared || seen.has(q.id)) return false;
+    seen.add(q.id);
+    return true;
+  });
+  if (!pool.length) {
+    showToast('🎉', 'Nothing to review', 'You have no missed questions');
+    return;
+  }
+  isDailyMode = false;
+  isPracticeMode = true;
+  lastRoundDiff = 'practice';
+  questions = shuffle(pool).slice(0, QUESTIONS_PER_ROUND);
+  resetRound();
+  show('quizScreen');
+  loadQuestion();
+}
+
+// ── QUIT ─────────────────────────────────────────────────────
+function requestQuit() {
+  if (answered) return;
+  stopTimer();
+  document.getElementById('quitConfirmBox').style.display = 'block';
+}
+
+function cancelQuit() {
+  document.getElementById('quitConfirmBox').style.display = 'none';
+  if (!answered) resumeTimer();
+}
+
+function confirmQuit() {
+  document.getElementById('quitConfirmBox').style.display = 'none';
+  stopTimer();
+  isDailyMode = false;
+  isPracticeMode = false;
+  show('startScreen');
+  refreshCoinDisplays();
+}
+
+// ── TIMER (each question uses its own level's time) ───────────
+function startTimer() {
+  clearInterval(timerInterval);
+  timerTotal = LEVEL_META[levelOf(questions[current])].time;
+  timerSeconds = timerTotal;
+  updateTimerUI();
+  resumeTimer();
+}
+
+function resumeTimer() {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timerSeconds--;
+    updateTimerUI();
+    if (timerSeconds <= 0) {
+      clearInterval(timerInterval);
+      timeUp();
+    }
+  }, 1000);
+}
+
+function updateTimerUI() {
+  const pct = Math.min(100, Math.max(0, (timerSeconds / timerTotal) * 100));
+  const bar = document.getElementById('timerBar');
+  const num = document.getElementById('timerNum');
+  bar.style.width = pct + '%';
+  bar.style.background = timerSeconds <= 5 ? 'var(--wrong)' : timerSeconds <= 10 ? '#f5c842' : 'var(--correct)';
+  num.textContent = Math.max(0, timerSeconds);
+  num.className = 'timer-num' + (timerSeconds <= 5 ? ' urgent' : '');
+}
+
+function stopTimer() { clearInterval(timerInterval); }
+
+// A Streak Shield (if owned) protects the streak from a miss. Returns true if it did.
+function spendShield() {
+  if (streak > 0 && (state.inventory.shield || 0) > 0) {
+    state.inventory.shield--;
+    roundPowerUps++;
+    logActivity('item', '🛡️ Streak Shield protected a streak of ' + streak);
+    return true;
+  }
+  streak = 0;
+  return false;
+}
+
+function timeUp() {
+  if (answered) return;
+  answered = true;
+  const q = questions[current];
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+  document.querySelectorAll('.option-btn')[q.answer].classList.add('correct');
+  const saved = spendShield();
+  recordAnswer(q, 'timeout');
+  const fb = document.getElementById('feedback');
+  fb.textContent = '⏱ Time\'s up! ' + (saved ? '🛡️ Streak Shield protected your streak. ' : '') + q.explanation;
+  fb.className = 'feedback wrong-fb show';
+  document.getElementById('nextBtn').classList.add('show');
+  saveState();
+  refreshInventoryUI();
+}
+
+// ── QUESTION ───────────────────────────────────────────────────
+function loadQuestion() {
+  answered = false;
+  hintUsedThisQuestion = false;
+  retryUsedThisQuestion = false;
+  questionStartedAt = Date.now();
+  document.getElementById('quitConfirmBox').style.display = 'none';
+  const q = questions[current];
+  const lvl = levelOf(q);
+  document.getElementById('qLabel').textContent = `Question ${current + 1} of ${questions.length}`;
+  document.getElementById('scoreLabel').textContent = `Score: ${score}`;
+  document.getElementById('progressBar').style.width = `${(current / questions.length) * 100}%`;
+  document.getElementById('questionNum').innerHTML =
+    `Question ${String(current + 1).padStart(2, '0')}` +
+    (isDailyMode ? ' · Daily' : '') + (isPracticeMode ? ' · Practice' : '') +
+    `<span class="lb-diff-chip ${lvl}">${LEVEL_META[lvl].label.toUpperCase()} · ${LEVEL_META[lvl].coins}🪙</span>`;
+  document.getElementById('questionText').textContent = q.q;
+
+  const codeEl = document.getElementById('codeBlock');
+  codeEl.innerHTML = q.code ? `<div class="code-block">${escapeHtml(q.code)}</div>` : '<div class="no-code"></div>';
+
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback'; fb.textContent = ''; fb.removeAttribute('style');
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.className = 'next-btn';
+  nextBtn.textContent = current === questions.length - 1 ? 'See Results →' : 'Next Question →';
+
+  const container = document.getElementById('optionsContainer');
+  container.innerHTML = '';
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.style.opacity = '';
+    btn.innerHTML = `<span class="letter">${letters[i]}</span><span>${escapeHtml(opt)}</span>`;
+    btn.onclick = () => selectAnswer(i, btn);
+    container.appendChild(btn);
+  });
+
+  refreshInventoryUI();
+  startTimer();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function selectAnswer(index, btn) {
+  if (answered) return;
+  const q = questions[current];
+  const level = levelOf(q);
+  const isCorrect = index === q.answer;
+
+  // Second Chance: a wrong pick is locked and the player may try once more.
+  if (!isCorrect && !retryUsedThisQuestion && (state.inventory.retry || 0) > 0) {
+    state.inventory.retry--;
+    retryUsedThisQuestion = true;
+    roundPowerUps++;
+    btn.classList.add('wrong');
+    btn.disabled = true;
+    logActivity('item', '🔁 Used Second Chance');
+    showToast('🔁', 'Second Chance!', 'That option is locked. Pick another answer.');
+    saveState();
+    refreshInventoryUI();
+    return;
+  }
+
+  answered = true;
+  stopTimer();
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+  const fb = document.getElementById('feedback');
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    score++;
+    streak++;
+    if (streak > (state.stats.bestStreak || 0)) state.stats.bestStreak = streak;
+    if ((Date.now() - questionStartedAt) / 1000 <= 3) {
+      state.stats.fastAnswers = (state.stats.fastAnswers || 0) + 1;
+    }
+
+    // coins depend on the question's level, plus bonuses
+    let earned = LEVEL_META[level].coins;
+    const notes = [];
+    if ((state.inventory.charm || 0) > 0) { earned += 1; notes.push('🍀 +1'); }
+    if (streak > 0 && streak % 2 === 0) { earned += 2; notes.push('🔥 streak +2'); }
+    if (boosterActive) { earned *= 2; notes.push('💎 2×'); }
+
+    recordAnswer(q, 'correct');
+    addCoins(earned);
+    document.getElementById('scoreLabel').textContent = `Score: ${score}`;
+    fb.textContent = `✓ Correct! +${earned} 🪙${notes.length ? ' (' + notes.join(', ') + ')' : ''} ` + q.explanation;
+    fb.className = 'feedback correct-fb show';
+    checkAchievements();
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('.option-btn')[q.answer].classList.add('correct');
+    const saved = spendShield();
+    recordAnswer(q, 'wrong');
+    fb.textContent = '✗ Not quite. ' + (saved ? '🛡️ Streak Shield protected your streak. ' : '') + q.explanation;
+    fb.className = 'feedback wrong-fb show';
+  }
+  saveState();
+  document.getElementById('nextBtn').classList.add('show');
+  refreshInventoryUI();
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) { showScore(); } else { loadQuestion(); }
+}
+
+// ── POWER-UPS (used during a question) ──────────────────────
+const USE_BUTTONS = [
+  { id: 'hint50',  btn: 'hintBtn',    count: 'hintCount',    blocked: () => hintUsedThisQuestion },
+  { id: 'freeze',  btn: 'freezeBtn',  count: 'freezeCount' },
+  { id: 'warp',    btn: 'warpBtn',    count: 'warpCount' },
+  { id: 'skip',    btn: 'skipBtn',    count: 'skipCount' },
+  { id: 'booster', btn: 'boosterBtn', count: 'boosterCount', blocked: () => boosterActive }
+];
+
+function refreshInventoryUI() {
+  if (!document.getElementById('hintBtn')) return;
+  USE_BUTTONS.forEach(u => {
+    const owned = state.inventory[u.id] || 0;
+    document.getElementById(u.count).textContent = owned;
+    document.getElementById(u.btn).disabled = answered || owned <= 0 || (u.blocked ? u.blocked() : false);
+  });
+
+  // status chips for automatic / permanent / active effects
+  const chips = [];
+  if ((state.inventory.shield || 0) > 0) chips.push(`<span class="passive-chip on">🛡️ Shield ×${state.inventory.shield}</span>`);
+  if ((state.inventory.retry || 0) > 0)  chips.push(`<span class="passive-chip on">🔁 Second Chance ×${state.inventory.retry}</span>`);
+  if ((state.inventory.charm || 0) > 0)  chips.push(`<span class="passive-chip on">🍀 Lucky Charm +1🪙</span>`);
+  if (boosterActive)                     chips.push(`<span class="passive-chip on">💎 2× coins active</span>`);
+  const row = document.getElementById('passiveRow');
+  if (row) row.innerHTML = chips.join('');
+  refreshCoinDisplays();
+}
+
+function usePowerUp(id, logText) {
+  state.inventory[id]--;
+  roundPowerUps++;
+  logActivity('item', logText);
+  saveState();
+}
+
+function useHint() {
+  if (answered || hintUsedThisQuestion || !((state.inventory.hint50 || 0) > 0)) return;
+  hintUsedThisQuestion = true;
+  usePowerUp('hint50', '✂️ Used 50/50 Hint');
+  const q = questions[current];
+  const buttons = Array.from(document.querySelectorAll('.option-btn'));
+  const wrongIdx = buttons.map((b, i) => i).filter(i => i !== q.answer && !buttons[i].disabled);
+  shuffle(wrongIdx).slice(0, 2).forEach(i => {
+    buttons[i].disabled = true;
+    buttons[i].style.opacity = '0.25';
+  });
+  refreshInventoryUI();
+}
+
+function addTime(id, seconds, icon, name) {
+  if (answered || !((state.inventory[id] || 0) > 0)) return;
+  usePowerUp(id, `${icon} Used ${name}`);
+  timerSeconds += seconds;
+  updateTimerUI();
+  showToast(icon, name, `+${seconds} seconds added`);
+  refreshInventoryUI();
+}
+function useFreeze() { addTime('freeze', 10, '🧊', 'Time Freeze'); }
+function useWarp()   { addTime('warp',   20, '⏳', 'Time Warp'); }
+
+function useBooster() {
+  if (answered || boosterActive || !((state.inventory.booster || 0) > 0)) return;
+  usePowerUp('booster', '💎 Activated Coin Booster');
+  boosterActive = true;
+  showToast('💎', 'Coin Booster on', '2× coins for the rest of this round');
+  refreshInventoryUI();
+}
+
+function useSkip() {
+  if (answered || !((state.inventory.skip || 0) > 0)) return;
+  usePowerUp('skip', '⏭ Used Skip Token');
+  answered = true;   // a skip does not break the streak
+  stopTimer();
+  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+  const q = questions[current];
+  document.querySelectorAll('.option-btn')[q.answer].classList.add('correct');
+  recordAnswer(q, 'skip');
+  const fb = document.getElementById('feedback');
+  fb.textContent = '⏭ Skipped. ' + q.explanation;
+  fb.className = 'feedback show';
+  fb.style.background = 'rgba(255,255,255,0.04)';
+  fb.style.color = 'var(--muted)';
+  fb.style.border = '1px solid var(--border)';
+  document.getElementById('nextBtn').classList.add('show');
+  saveState();
+  refreshInventoryUI();
+}
+
+// ── SCORE ──────────────────────────────────────────────────────
+function showScore() {
+  stopTimer();
+  document.getElementById('progressBar').style.width = '100%';
+  document.getElementById('qLabel').textContent = 'Quiz Complete';
+  show('scoreScreen');
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalTotal').textContent = questions.length;
+
+  const practice = isPracticeMode;
+  const daily = isDailyMode;
+  const perfect = questions.length > 0 && score === questions.length;
+  let bonusCoins = 0;
+
+  if (!practice) {
+    state.stats.gamesPlayed = (state.stats.gamesPlayed || 0) + 1;
+    if (score > (state.stats.bestScore || 0)) state.stats.bestScore = score;
+    if (LEVELS.includes(lastRoundDiff)) {
+      state.stats.levelsPlayed[lastRoundDiff] = true;
+      if (lastRoundDiff === 'hard') state.stats.hardCompleted = (state.stats.hardCompleted || 0) + 1;
+    }
+    if (perfect) {
+      state.stats.perfectRounds = (state.stats.perfectRounds || 0) + 1;
+      if (lastRoundDiff === 'hard') state.stats.hardPerfect = (state.stats.hardPerfect || 0) + 1;
+      if (roundPowerUps === 0) state.stats.pureRounds = (state.stats.pureRounds || 0) + 1;
+      bonusCoins += 20;
+      showToast('💯', 'Perfect Round!', '+20 bonus coins');
+    }
+  }
+
+  if (daily) {
+    const today = todayStr();
+    if (state.stats.lastDailyDate !== today) {
+      state.stats.dailyStreak = isYesterdayStr(state.stats.lastDailyDate) ? (state.stats.dailyStreak || 0) + 1 : 1;
+      state.stats.lastDailyDate = today;
+      const streakBonus = Math.min(state.stats.dailyStreak * 2, 50);
+      bonusCoins += 15 + streakBonus;
+      showToast('🔥', 'Daily Challenge Complete!', `Streak: ${state.stats.dailyStreak} day(s)`);
+      logActivity('daily', `Completed the Daily Challenge (streak: ${state.stats.dailyStreak})`);
+    }
+    isDailyMode = false;
+  }
+  if (bonusCoins > 0) addCoins(bonusCoins);
+  document.getElementById('coinsEarned').textContent = coinsEarnedThisRound;
+
+  // remember this round
+  const modeLabel = practice ? 'Practice' : daily ? 'Daily' : (LEVEL_META[lastRoundDiff] ? LEVEL_META[lastRoundDiff].label : lastRoundDiff);
+  state.memory.rounds.unshift({
+    t: Date.now(), mode: lastRoundDiff, score, total: questions.length,
+    coins: coinsEarnedThisRound, practice
+  });
+  if (state.memory.rounds.length > MAX_ROUNDS) state.memory.rounds.length = MAX_ROUNDS;
+  logActivity('round', `${modeLabel} round finished: ${score}/${questions.length}, +${coinsEarnedThisRound} coins`);
+
+  saveState();
+  checkAchievements();
+
+  // leaderboard save box (not for practice rounds)
+  document.getElementById('saveScoreBox').style.display = practice ? 'none' : 'block';
+  document.getElementById('practiceNote').style.display = practice ? 'block' : 'none';
+  const input = document.getElementById('playerName');
+  input.value = visitorName || '';
+  input.disabled = false;
+  input.style.opacity = '1';
+  document.getElementById('savedMsg').style.display = 'none';
+  const saveBtns = document.querySelectorAll('[onclick="saveScore()"]');
+  saveBtns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+
+  const pct = score / questions.length;
+  let title, msg;
+  if (pct === 1)       { title = 'Gopher Master!';  msg = "Flawless! You could write the Go spec yourself. 🐹"; }
+  else if (pct >= 0.8) { title = 'Go Expert!';      msg = "Impressive! You clearly write Go in your sleep."; }
+  else if (pct >= 0.6) { title = 'Solid Go Dev!';   msg = "Nice work! Brush up on the trickier topics to level up."; }
+  else if (pct >= 0.4) { title = 'Getting There!';  msg = "You know some Go! Keep practicing."; }
+  else                 { title = 'agba coder!';     msg = "Go has a steep curve — review the basics and try again!"; }
+  document.getElementById('scoreTitle').textContent = title;
+  document.getElementById('scoreMsg').textContent = msg;
+  isPracticeMode = false;
+}
+
+// ── GAME MEMORY SCREEN ─────────────────────────────────────────
+const LOG_ICONS = {
+  correct: '✅', clear: '🩹', wrong: '❌', timeout: '⏱', skip: '⏭', buy: '🛒',
+  item: '🧩', achievement: '🏅', round: '🎮', daily: '🔥', session: '👋'
+};
+
+function fmtTime(t) {
+  try {
+    return new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } catch (e) { return ''; }
+}
+
+function levelChip(level) {
+  const l = LEVEL_META[level] ? level : 'medium';
+  return `<span class="lb-diff-chip ${l}">${LEVEL_META[l].label.toUpperCase()}</span>`;
+}
+
+function showMemory() {
+  show('memScreen');
+  renderMemory();
+}
+
+function renderMemory() {
+  const s = state.stats, m = state.memory;
+  document.getElementById('memWho').textContent = visitorName
+    ? `${visitorName}: your progress is remembered under this name`
+    : 'Playing as a guest. Enter a name on the welcome screen to keep this memory under your name.';
+
+  const correct = s.correctTotal || 0, failed = s.failedTotal || 0;
+  const answeredCount = correct + failed;
+  const acc = answeredCount ? Math.round((correct * 100) / answeredCount) : 0;
+  const missedList = Object.entries(m.missed)
+    .filter(([, v]) => !v.cleared)
+    .sort((a, b) => b[1].misses - a[1].misses);
+
+  const out = [];
+
+  out.push(`<div class="mem-grid">
+    <div class="mem-pill"><div class="num">${state.coins}</div><div class="lbl">Coins</div></div>
+    <div class="mem-pill"><div class="num">${correct}</div><div class="lbl">Correct</div></div>
+    <div class="mem-pill"><div class="num">${failed}</div><div class="lbl">Failed</div></div>
+    <div class="mem-pill"><div class="num">${acc}%</div><div class="lbl">Accuracy</div></div>
+    <div class="mem-pill"><div class="num">${s.bestStreak || 0}</div><div class="lbl">Best streak</div></div>
+    <div class="mem-pill"><div class="num">${s.gamesPlayed || 0}</div><div class="lbl">Rounds</div></div>
+  </div>`);
+
+  out.push('<div class="mem-sec">By level</div>');
+  out.push(LEVELS.map(l => {
+    const b = m.byLevel[l] || { correct: 0, failed: 0 };
+    const t = b.correct + b.failed;
+    const pct = t ? Math.round((b.correct * 100) / t) : 0;
+    return `<div class="mem-level">${levelChip(l)}
+      <div class="mem-bar"><div style="width:${pct}%"></div></div>
+      <span>${b.correct} ✅ ${b.failed} ❌</span></div>`;
+  }).join(''));
+
+  out.push('<div class="mem-sec">Items bought</div>');
+  const bought = SHOP_ITEMS.filter(i => (s.purchases[i.id] || 0) > 0);
+  out.push(bought.length ? bought.map(i => `
+    <div class="mem-row"><div class="mr-main">${i.icon} ${escapeHtml(i.name)}</div>
+    <div class="mr-side">bought ${s.purchases[i.id]} · owned ${state.inventory[i.id] || 0}</div></div>`).join('')
+    : '<div class="mem-empty">Nothing bought yet. Visit the shop to spend your coins.</div>');
+
+  out.push(`<div class="mem-sec">Achievements (${state.achievements.length}/${ACHIEVEMENTS.length})</div>`);
+  const unlocked = ACHIEVEMENTS.filter(a => state.achievements.includes(a.id));
+  out.push(unlocked.length
+    ? `<div class="mem-badges">${unlocked.map(a => `<span title="${escapeHtml(a.name)}">${a.icon}</span>`).join('')}</div>`
+    : '<div class="mem-empty">No achievements yet.</div>');
+
+  out.push(`<div class="mem-sec">Questions to review (${missedList.length})</div>`);
+  if (missedList.length) {
+    out.push(missedList.slice(0, 15).map(([, v]) => `
+      <div class="mem-row"><div class="mr-main">${escapeHtml(clip(v.q, 90))}</div>
+      <div class="mr-side">${levelChip(v.level)} ${v.misses}×</div></div>`).join(''));
+    if (missedList.length > 15) out.push(`<div class="mem-empty">…and ${missedList.length - 15} more</div>`);
+    out.push('<button class="practice-btn" onclick="startPractice()">🎯 Practice missed questions</button>');
+  } else {
+    out.push('<div class="mem-empty">No open missed questions. Cleared so far: ' + (s.clearedTotal || 0) + '.</div>');
+  }
+
+  out.push('<div class="mem-sec">Recent rounds</div>');
+  out.push(m.rounds.length ? m.rounds.slice(0, 8).map(r => {
+    const label = r.practice ? 'Practice' : r.mode === 'daily' ? 'Daily' : (LEVEL_META[r.mode] ? LEVEL_META[r.mode].label : r.mode);
+    return `<div class="mem-row"><div class="mr-main">${escapeHtml(label)}: ${r.score}/${r.total} · +${r.coins} 🪙</div>
+      <div class="mr-side">${fmtTime(r.t)}</div></div>`;
+  }).join('') : '<div class="mem-empty">No rounds played yet.</div>');
+
+  out.push('<div class="mem-sec">Recent activity</div>');
+  out.push(m.log.length ? m.log.slice(0, 25).map(e => `
+    <div class="mem-row"><div class="mr-main">${LOG_ICONS[e.type] || '•'} ${escapeHtml(e.text)}</div>
+    <div class="mr-side">${fmtTime(e.t)}</div></div>`).join('')
+    : '<div class="mem-empty">Nothing recorded yet.</div>');
+
+  document.getElementById('memBody').innerHTML = out.join('');
+}
+
+// ── LEADERBOARD (backed by Go server API) ─────────────────────
+async function saveScore() {
+  const name = document.getElementById('playerName').value.trim() || visitorName || 'Anonymous';
+  const saveBtns = document.querySelectorAll('[onclick="saveScore()"]');
+  saveBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.5'; });
+
+  try {
+    const res = await fetch('/api/leaderboard', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, score, total: questions.length, diff: lastRoundDiff })
+    });
+    if (!res.ok) throw new Error('Server error');
+    document.getElementById('savedMsg').style.display = 'block';
+    document.getElementById('playerName').disabled = true;
+    lbFilter = lastRoundDiff;   // jump straight to the board this score landed on
+  } catch (e) {
+    saveBtns.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+    alert('Could not save score. Is the server running?');
+  }
+}
+
+// Difficulty weights: harder difficulties rank higher with the same score.
+// A Hard 12/15 (80%) beats an Easy 15/15 (100%) because Hard is tougher.
+const DIFF_WEIGHTS = { easy: 1.0, medium: 1.5, hard: 2.0, daily: 1.0 };
+
+function getWeightedScore(entry) {
+  const pct = entry.total ? entry.score / entry.total : 0;
+  const weight = DIFF_WEIGHTS[(entry.diff || '').toLowerCase()] || 1.0;
+  return pct * weight;
+}
+
+function sortEntries(list) {
+  return [...list].sort((a, b) => {
+    // 1. Sort by weighted score (difficulty × percentage)
+    const wa = getWeightedScore(a), wb = getWeightedScore(b);
+    if (wb !== wa) return wb - wa;
+    // 2. Tiebreak: raw score (more questions correct wins)
+    if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
+    // 3. Tiebreak: earliest date (first to achieve the score wins)
+    return new Date(a.date || 0) - new Date(b.date || 0);
+  });
+}
+
+function setLbFilter(diff, btn) {
+  lbFilter = diff;
+  document.querySelectorAll('.lb-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderLeaderboard();
+}
+
+function syncLbTabs() {
+  document.querySelectorAll('.lb-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.diff === lbFilter);
+  });
+}
+
+function renderLeaderboard() {
+  const list = document.getElementById('lbList');
+  const rows = lbFilter === 'all' ? lbCache : lbCache.filter(e => (e.diff || '') === lbFilter);
+
+  if (!rows.length) {
+    list.innerHTML = lbFilter === 'all'
+      ? '<div class="lb-empty">No scores yet. Play a round and save your score!</div>'
+      : `<div class="lb-empty">No ${lbFilter} scores yet — be the first.</div>`;
+    return;
+  }
+
+  const medals = ['gold','silver','bronze'];
+  list.innerHTML = sortEntries(rows).slice(0, 10).map((e, i) => {
+    const date = e.date ? new Date(e.date).toLocaleDateString() : '';
+    const d = (e.diff || '').toLowerCase();
+    let chip = '';
+    if (d === 'daily') {
+      chip = `<span class="lb-diff-chip daily">📅 DAILY</span>`;
+    } else if (d) {
+      chip = `<span class="lb-diff-chip ${d}">${d.toUpperCase()}</span>`;
+    }
+    return `
+      <li class="lb-item ${medals[i] || ''}">
+        <div class="lb-rank">${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</div>
+        <div class="lb-info">
+          <div class="lb-score-name">${escapeHtml(e.name)}</div>
+          <div class="lb-meta">${chip} ${date}</div>
+        </div>
+        <div class="lb-score-val">${e.score}<span style="font-size:14px;color:var(--muted)">/${e.total}</span></div>
+      </li>`;
+  }).join('');
+}
+
+async function showLeaderboard() {
+  show('lbScreen');
+  syncLbTabs();
+  const list = document.getElementById('lbList');
+  list.innerHTML = '<div class="lb-empty">Loading...</div>';
+  try {
+    const res = await fetch('/api/leaderboard');
+    const lb = await res.json();
+    lbCache = Array.isArray(lb) ? lb : [];
+    renderLeaderboard();
+  } catch (err) {
+    list.innerHTML = '<div class="lb-empty">Could not load scores. Is the server running?</div>';
+  }
+}
+
+// On page load: just show the welcome screen. We don't know who the
+// player is yet, so we can't load their progress until they type a name
+// and press "Let's Go" (enterApp -> loadPlayer).
+window.onload = function() {
+  const msgs = [
+    "Welcome, future Gopher! 🐹",
+    "Hello, Go developer! 👋",
+    "Ready to test your skills?",
+    "Welcome! Let's get started.",
+    "Hi there! Enter your name below."
+  ];
+  document.getElementById('welcomeMsg').textContent =
+    msgs[Math.floor(Math.random() * msgs.length)];
+  document.getElementById('featQCount').textContent = ALL_QUESTIONS.length;
+  document.getElementById('statQCount').textContent = ALL_QUESTIONS.length;
+  show('welcomeScreen');
+};
+
+</script>
+</body>
+</html>

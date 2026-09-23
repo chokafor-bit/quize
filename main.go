@@ -1,5 +1,6 @@
 // Command quizserver serves the "Imperative in Go" quiz app and backs its
-// leaderboard with a small JSON file on disk (no external DB required).
+// leaderboard and player progress with small JSON files on disk.
+// Player progress code lives in players.go.
 package main
 
 import (
@@ -31,25 +32,6 @@ const (
 var (
 	mu      sync.Mutex
 	entries []Entry
-)
-
-type Player struct {
-	Name          string         `json:"name"`
-	Coins         int            `json:"coins"`
-	LifetimeCoins int            `json:"lifetimeCoins"`
-	AvatarImage   string         `json:"avatarImage,omitempty"`
-	ProfileTitle  string         `json:"profileTitle,omitempty"`
-	ProfileColor  string         `json:"profileColor,omitempty"`
-	Achievements  []string       `json:"achievements"`
-	Purchases     map[string]int `json:"purchases"`
-	Inventory     map[string]int `json:"inventory"`
-	Stats         map[string]int `json:"stats"`
-	SavedAt       string         `json:"savedAt"`
-}
-
-var (
-	players   = map[string]Player{}
-	playersMu sync.Mutex
 )
 
 type RoomPlayer struct {
@@ -176,93 +158,6 @@ func roomHandler(w http.ResponseWriter, r *http.Request) {
 	result := *room
 	roomsMu.Unlock()
 	json.NewEncoder(w).Encode(result)
-}
-
-func playerHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		name := strings.TrimSpace(r.URL.Query().Get("name"))
-		if name == "" {
-			http.Error(w, "missing player name", http.StatusBadRequest)
-			return
-		}
-		playersMu.Lock()
-		p, ok := players[strings.ToLower(name)]
-		playersMu.Unlock()
-		if !ok {
-			http.NotFound(w, r)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(p)
-	case http.MethodPost:
-		var p Player
-		if err := json.NewDecoder(r.Body).Decode(&p); err != nil || strings.TrimSpace(p.Name) == "" {
-			http.Error(w, "bad request", http.StatusBadRequest)
-			return
-		}
-		p.Name = strings.TrimSpace(p.Name)
-		if len(p.Name) > 20 {
-			p.Name = p.Name[:20]
-		}
-		if p.Coins < 0 || p.LifetimeCoins < 0 {
-			http.Error(w, "invalid player progress", http.StatusBadRequest)
-			return
-		}
-		if p.Achievements == nil {
-			p.Achievements = []string{}
-		}
-		if p.Purchases == nil {
-			p.Purchases = map[string]int{}
-		}
-		if p.Inventory == nil {
-			p.Inventory = map[string]int{}
-		}
-		if p.Stats == nil {
-			p.Stats = map[string]int{}
-		}
-		p.SavedAt = time.Now().UTC().Format(time.RFC3339)
-
-		playersMu.Lock()
-		players[strings.ToLower(p.Name)] = p
-		err := savePlayers()
-		playersMu.Unlock()
-		if err != nil {
-			log.Printf("error saving player progress: %v", err)
-			http.Error(w, "could not save player progress", http.StatusInternalServerError)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-	default:
-		w.Header().Set("Allow", "GET, POST")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	}
-}
-
-func loadPlayers() {
-	playersMu.Lock()
-	defer playersMu.Unlock()
-
-	b, err := os.ReadFile(playersDataFile)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			log.Printf("warning: could not read %s: %v", playersDataFile, err)
-		}
-		return
-	}
-	if err := json.Unmarshal(b, &players); err != nil {
-		log.Printf("warning: could not parse %s: %v", playersDataFile, err)
-		players = map[string]Player{}
-	}
-}
-
-func savePlayers() error {
-	// caller must hold playersMu
-	b, err := json.MarshalIndent(players, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(playersDataFile, b, 0o644)
 }
 
 func loadEntries() {
