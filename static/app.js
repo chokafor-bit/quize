@@ -4,9 +4,9 @@
 // the question belongs to.
 const LEVELS = ['easy', 'medium', 'hard'];
 const LEVEL_META = {
-  easy:   { label: 'Easy',   time: 30, coins: 2 },
-  medium: { label: 'Medium', time: 25, coins: 3 },
-  hard:   { label: 'Hard',   time: 15, coins: 5 }
+  easy:   { label: 'Easy',   time: 30, coins: 1 },
+  medium: { label: 'Medium', time: 25, coins: 2 },
+  hard:   { label: 'Hard',   time: 15, coins: 3 }
 };
 function levelOf(q) {
   return q && LEVEL_META[q.level] ? q.level : 'medium';
