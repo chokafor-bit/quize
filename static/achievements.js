@@ -32,7 +32,7 @@ const ACHIEVEMENTS = [
   { id: 'coin_collector', icon: '💰', name: 'Coin Collector',        desc: 'Earn 1000 coins in total',                                check: s => s.stats.lifetimeCoins >= 1000 },
   { id: 'tycoon',         icon: '🏦', name: 'Tycoon',                desc: 'Earn 5000 coins in total',                                check: s => s.stats.lifetimeCoins >= 5000 },
   { id: 'shopper',        icon: '🛍️', name: 'First Purchase',        desc: 'Buy something from the shop',                             check: s => s.stats.itemsBought >= 1 },
-  { id: 'spender',        icon: '💸', name: 'Big Spender',           desc: 'Buy 9 items from the shop',                              check: s => s.stats.itemsBought >= 10 },
+  { id: 'spender',        icon: '💸', name: 'Big Spender',           desc: 'Buy 9 items from the shop',                              check: s => s.stats.itemsBought >= 9 },
   { id: 'collector',      icon: '🧺', name: 'Collector',             desc: 'Buy every kind of item in the shop at least once',        check: s => SHOP_ITEMS.every(i => (s.stats.purchases[i.id] || 0) >= 1) },
   { id: 'royalty',        icon: '👑', name: 'Royalty',               desc: 'Buy the Golden Crown',                                    check: s => (s.stats.purchases.crown || 0) >= 1 },
   // daily
